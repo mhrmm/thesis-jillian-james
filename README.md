@@ -1,1 +1,1 @@
-# thesis-jillian-james
+# Jillian's Thesis Project
