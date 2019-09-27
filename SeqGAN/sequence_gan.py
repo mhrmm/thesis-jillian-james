@@ -15,7 +15,7 @@ EMB_DIM = 32 # embedding dimension
 HIDDEN_DIM = 32 # hidden state dimension of lstm cell
 SEQ_LENGTH =  20 # 20 sequence length
 START_TOKEN = 0
-PRE_EPOCH_NUM = 25   # 120  supervise (maximum likelihood estimation) epochs
+PRE_EPOCH_NUM = 120   # 120  supervise (maximum likelihood estimation) epochs
 SEED = 88
 BATCH_SIZE = 64
 
@@ -32,7 +32,7 @@ dis_batch_size = 64
 #########################################################################################
 #  Basic Training Parameters
 #########################################################################################
-TOTAL_BATCH =  25 # 200
+TOTAL_BATCH =  200 # 200
 log_file =  "haiku/haiku_log.txt"            # 'save/experiment-log.txt' 
 positive_file =  'haiku/haiku_to_int.train.txt'     # 'save/real_data.txt' 'haiku/haiku.train.txt'
 negative_file = 'haiku/generator_sample.txt' # 'save/generator_sample.txt'
