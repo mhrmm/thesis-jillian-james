@@ -76,7 +76,7 @@ def write_dict_to_file(filename, d):
 
 with open("int_to_word.json", 'r') as f:
     int_to_word = json.load(f)
-haikus = dataloader_form_to_haiku("eval_file.txt", int_to_word)
+haikus = dataloader_form_to_haiku("generator_sample.txt", int_to_word)
 print(haikus[random.randint(0, len(haikus))])
         
         
