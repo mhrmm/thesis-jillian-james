@@ -155,7 +155,6 @@ def main():
         for it in range(1):
             samples = generator.generate(sess)
             rewards = rollout.get_reward(sess, samples, 16, discriminator)
-            print(rewards)
             feed = {generator.x: samples, generator.rewards: rewards}
             _ = sess.run(generator.g_updates, feed_dict=feed)
 
@@ -168,7 +167,7 @@ def main():
             test_loss = target_loss(sess, generator, likelihood_data_loader)         
             #buffer = 'epoch:\t' + str(total_batch) + '\tnll:\t' + str(test_loss) + '\n'
             #print('total_batch: ', total_batch, 'test_loss: ', test_loss)
-            print("total_batch:", total_batch)
+            print("total_batch: ", total_batch, "test_loss: ", test_loss)
             log.write(buffer)
 
         # Update roll-out parameters
