@@ -36,7 +36,7 @@ TOTAL_BATCH =  200 # 200
 log_file =  "haiku/haiku_log.txt"            # 'save/experiment-log.txt' 
 positive_file =  'haiku/haiku_to_int.train.txt'     # 'save/real_data.txt' 'haiku/haiku.train.txt'
 negative_file = 'haiku/generator_sample.txt' # 'save/generator_sample.txt'
-valid_file = "haiku/haiku.valid.txt"
+valid_file = "haiku/haiku_to_int.valid.txt"
 eval_file =  'haiku/eval_file.txt'         # 'save/eval_file.txt'
 generated_num = 10000
 
@@ -61,7 +61,6 @@ def target_loss(sess, target_lstm, data_loader):
 
     for it in range(data_loader.num_batch):
         batch = data_loader.next_batch()
-        print(target_lstm.pretrain_loss)
         g_loss = sess.run(target_lstm.pretrain_loss, {target_lstm.x: batch})
         nll.append(g_loss)
 
