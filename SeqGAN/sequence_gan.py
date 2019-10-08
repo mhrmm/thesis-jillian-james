@@ -36,6 +36,7 @@ TOTAL_BATCH =  200 # 200
 log_file =  "haiku/haiku_log.txt"            # 'save/experiment-log.txt' 
 positive_file =  'haiku/haiku_to_int.train.txt'     # 'save/real_data.txt' 'haiku/haiku.train.txt'
 negative_file = 'haiku/generator_sample.txt' # 'save/generator_sample.txt'
+valid_file = "haiku/haiku.valid.txt"
 eval_file =  'haiku/eval_file.txt'         # 'save/eval_file.txt'
 generated_num = 10000
 
@@ -120,9 +121,11 @@ def main():
         if epoch % 5 == 0:
             generate_samples(sess, generator, BATCH_SIZE, generated_num, eval_file)
             #likelihood_data_loader.create_batches(eval_file)
+            likelihood_data_loader.create_batches(valid_file)
             #test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
-            #print('pre-train epoch ', epoch, 'test_loss ', test_loss)
-            print("pre-train epoch: ", epoch, loss)
+            test_loss = target_loss(sess, generator, likelihood_data_loader)
+            print('pre-train epoch ', epoch, 'test_loss ', test_loss)
+            #print("pre-train epoch: ", epoch, loss)
             #buffer = 'epoch:\t'+ str(epoch) + '\tnll:\t' + str(test_loss) + '\n'
             buffer = 'epoch:\t'+ str(epoch) + '\tloss:\t' + str(loss) + '\n'
             #log.write(buffer)
@@ -160,8 +163,8 @@ def main():
         # Test
         if total_batch % 5 == 0 or total_batch == TOTAL_BATCH - 1:
             generate_samples(sess, generator, BATCH_SIZE, generated_num, eval_file)
-            #likelihood_data_loader.create_batches(eval_file)
-            #test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
+            likelihood_data_loader.create_batches(eval_file)
+            test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
             #buffer = 'epoch:\t' + str(total_batch) + '\tnll:\t' + str(test_loss) + '\n'
             #print('total_batch: ', total_batch, 'test_loss: ', test_loss)
             print("total_batch:", total_batch)
