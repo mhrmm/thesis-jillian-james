@@ -162,8 +162,10 @@ def main():
         # Test
         if total_batch % 5 == 0 or total_batch == TOTAL_BATCH - 1:
             generate_samples(sess, generator, BATCH_SIZE, generated_num, eval_file)
-            likelihood_data_loader.create_batches(eval_file)
-            test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
+            #likelihood_data_loader.create_batches(eval_file)
+            #test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
+            likelihood_data_loader.create_batches(valid_file)
+            test_loss = target_loss(sess, generator, likelihood_data_loader)         
             #buffer = 'epoch:\t' + str(total_batch) + '\tnll:\t' + str(test_loss) + '\n'
             #print('total_batch: ', total_batch, 'test_loss: ', test_loss)
             print("total_batch:", total_batch)
