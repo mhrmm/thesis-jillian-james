@@ -38,7 +38,7 @@ positive_file =  'obama/obama_to_int.train.txt'     # 'save/real_data.txt' 'haik
 negative_file = 'obama/generator_sample.txt' # 'save/generator_sample.txt' 'haiku/generator_sample.txt
 valid_file = "obama/obama_to_int.valid.txt" # "haiku/haiku_to_int.valid.txt"
 eval_file =  'obama/eval_file.txt'         # 'save/eval_file.txt' 'haiku/eval_file.txt'
-generated_num = 10000
+generated_num = 1488 #10000 
 
 
 def generate_samples(sess, trainable_model, batch_size, generated_num, output_file):
