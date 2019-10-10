@@ -13,9 +13,9 @@ import pickle
 ######################################################################################
 EMB_DIM = 32 # embedding dimension
 HIDDEN_DIM = 32 # hidden state dimension of lstm cell
-SEQ_LENGTH =  20 # 20 sequence length
+SEQ_LENGTH =  50 #20 for haikus # 20 sequence length
 START_TOKEN = 0
-PRE_EPOCH_NUM = 25   # 120  supervise (maximum likelihood estimation) epochs
+PRE_EPOCH_NUM = 120 #25 for haikus  # 120  supervise (maximum likelihood estimation) epochs
 SEED = 88
 BATCH_SIZE = 64
 
@@ -32,12 +32,12 @@ dis_batch_size = 64
 #########################################################################################
 #  Basic Training Parameters
 #########################################################################################
-TOTAL_BATCH =  100 # 200
-log_file =  "haiku/haiku_log.txt"            # 'save/experiment-log.txt' 
-positive_file =  'haiku/haiku_to_int.train.txt'     # 'save/real_data.txt' 'haiku/haiku.train.txt'
-negative_file = 'haiku/generator_sample.txt' # 'save/generator_sample.txt'
-valid_file = "haiku/haiku_to_int.valid.txt"
-eval_file =  'haiku/eval_file.txt'         # 'save/eval_file.txt'
+TOTAL_BATCH =  200 # 100 for haikus # 200
+log_file =  "obama/obama_log.txt"            # 'save/experiment-log.txt' "haiku/haiku_log.txt"
+positive_file =  'obama/obama_to_int.train.txt'     # 'save/real_data.txt' 'haiku/haiku_to_int.train.txt'
+negative_file = 'obama/generator_sample.txt' # 'save/generator_sample.txt' 'haiku/generator_sample.txt
+valid_file = "obama/obama_to_int.valid.txt" # "haiku/haiku_to_int.valid.txt"
+eval_file =  'obama/eval_file.txt'         # 'save/eval_file.txt' 'haiku/eval_file.txt'
 generated_num = 10000
 
 
