@@ -13,7 +13,7 @@ class Gen_Data_loader():
                 line = line.strip()
                 line = line.split()
                 parse_line = [int(x) for x in line]
-                if len(parse_line) == 20:
+                if len(parse_line) == 50: #Keep as 20 for haiku and other
                     self.token_stream.append(parse_line)
         self.num_batch = int(len(self.token_stream) / self.batch_size)
         self.token_stream = self.token_stream[:self.num_batch * self.batch_size]
@@ -50,7 +50,7 @@ class Dis_dataloader():
                 line = line.strip()
                 line = line.split()
                 parse_line = [int(x) for x in line]
-                if len(parse_line) == 20:
+                if len(parse_line) == 20: #Keep as 20 for haiku and other
                     negative_examples.append(parse_line)
         self.sentences = np.array(positive_examples + negative_examples)
 
