@@ -12,7 +12,7 @@ def para_str_to_ls(file):
             if line != "\n":
                 line = line.strip()
                 line = line.split()
-                if len(line) <= 50:
+                if line != [] and len(line) <= 50:
                     num_stopwords = 50 - len(line)
                     paragraph = line + ["_FILL_"]*num_stopwords
                     full.append(paragraph)
