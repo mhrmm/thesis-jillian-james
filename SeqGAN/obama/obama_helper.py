@@ -81,6 +81,10 @@ obama_valid_ls = para_str_to_ls("obama.valid.txt")
 word_to_int, int_to_word, vocab_length = creat_dicts(obama_train_ls+obama_valid_ls)
 paras_train_as_int_ls = para_ls_to_int_ls(obama_train_ls, word_to_int)
 paras_valid_as_int_ls = para_ls_to_int_ls(obama_valid_ls, word_to_int)
+if len(paras_train_as_int_ls) > len(paras_valid_as_int_ls):
+    paras_train_as_int_ls = paras_train_as_int_ls[:len(paras_valid_as_int_ls)]
+if len(paras_train_as_int_ls) < len(paras_valid_as_int_ls):
+    paras_valid_as_int_ls = paras_valid_as_int_ls[:len(paras_train_as_int_ls)]
 print(vocab_length)
 write_dict_to_file("word_to_int.json", word_to_int)
 write_dict_to_file("int_to_word.json", int_to_word)
