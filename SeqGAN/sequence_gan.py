@@ -38,7 +38,7 @@ positive_file =  'obama/obama_to_int.train.txt'     # 'save/real_data.txt' 'haik
 negative_file = 'obama/generator_sample.txt' # 'save/generator_sample.txt' 'haiku/generator_sample.txt
 valid_file = "obama/obama_to_int.valid.txt" # "haiku/haiku_to_int.valid.txt"
 eval_file =  'obama/eval_file.txt'         # 'save/eval_file.txt' 'haiku/eval_file.txt'
-generated_num = 1488 #10000 
+generated_num = 10000 
 
 
 def generate_samples(sess, trainable_model, batch_size, generated_num, output_file):
@@ -87,7 +87,7 @@ def main():
 
     gen_data_loader = Gen_Data_loader(BATCH_SIZE)
     likelihood_data_loader = Gen_Data_loader(BATCH_SIZE) # For testing
-    vocab_size =  8382 #5000
+    vocab_size =  12389 #5000
     dis_data_loader = Dis_dataloader(BATCH_SIZE)
 
 
@@ -96,7 +96,7 @@ def main():
     target_params = pickle.load(file_obj, encoding='latin1')
     #target_lstm = TARGET_LSTM(vocab_size, BATCH_SIZE, EMB_DIM, HIDDEN_DIM, SEQ_LENGTH, START_TOKEN, target_params) # The oracle model
 
-    discriminator = Discriminator(sequence_length=20, num_classes=2, vocab_size=vocab_size, embedding_size=dis_embedding_dim, 
+    discriminator = Discriminator(sequence_length=SEQ_LENGTH, num_classes=2, vocab_size=vocab_size, embedding_size=dis_embedding_dim, 
                                 filter_sizes=dis_filter_sizes, num_filters=dis_num_filters, l2_reg_lambda=dis_l2_reg_lambda)
 
     config = tf.ConfigProto()
