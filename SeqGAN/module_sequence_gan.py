@@ -81,7 +81,7 @@ def pre_train_epoch(sess, trainable_model, data_loader):
     return np.mean(supervised_g_losses)
 
 
-def pre_train_generator(sess, generator, gen_data_loader, log_file, num_epochs):
+def pre_train_generator(sess, generator, gen_data_loader, likelihood_data_loader, eval_file, valid_file, log_file, num_epochs):
     log = open(log_file, 'w')
     print('Start pre-training...')
     log.write('pre-training...\n')
@@ -95,7 +95,7 @@ def pre_train_generator(sess, generator, gen_data_loader, log_file, num_epochs):
             buffer = 'epoch:\t'+ str(epoch) + '\tloss:\t' + str(loss) + '\n'
             log.write(buffer)
 
-def train_discriminator(sess, generator, discriminator, dis_dataloader, positive_file, negative_file, log_file, n):
+def train_discriminator(sess, generator, discriminator, dis_dataloader, negative_file, positive_file, log_file, n):
     for _ in range(n):
         generate_samples(sess, generator, BATCH_SIZE, generated_num, negative_file)
         dis_data_loader.load_train_data(positive_file, negative_file)
@@ -139,12 +139,10 @@ def main():
     gen_data_loader.create_batches(positive_file)
 
     # Pre_train the generator with MLE. 
-    pre_train_generator(sess, generator, gen_data_loader, log_file, PRE_EPOCH_NUM)
-
+    pre_train_generator(sess, generator, gen_data_loader, likelihood_data_loader, eval_file, valid_file, log_file, PRE_EPOCH_NUM):
     print('Start pre-training discriminator...')
     # Train 3 epoch on the generated data and do this for 50 times
-    train_discriminator(sess, generator, discriminator, dis_dataloader, positive_file, negative_file, log_file, 50)
-
+    train_discriminator(sess, generator, discriminator, dis_dataloader, negative_file, positive_file, log_file, 50)
     #Set rollout
     rollout = ROLLOUT(generator, 0.8)
 
@@ -170,7 +168,7 @@ def main():
         rollout.update_params()
 
         # Train the discriminator for 5 steps
-        train_discriminator(sess, generator, discriminator, dis_dataloader, positive_file, negative_file, log_file, 5)
+            train_discriminator(sess, generator, discriminator, dis_dataloader, negative_file, positive_file, log_file, 5)
 
     log.close()
 
