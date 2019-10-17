@@ -32,7 +32,6 @@ dis_batch_size = 64
 #  Basic Training Parameters
 #########################################################################################
 generated_num = 10000 
-vocab_size =  12389 #5000
 
 #########################################################################################
 #  Grouping Files for Parser
@@ -68,11 +67,13 @@ def assign_parser_args(args):
     # Need to add functionality to allow user-specified N to be used in training
     if args.app == 'haiku':
         seq_length = 20
+        vocab_size = 8382
         files = haiku_files
     else:
         seq_length = 50
+        vocab_size = 12389
         files = obama_files
-    return files, seq_length, args.gen_n, args.disc_n, args.adv_n
+    return files, vocab_size, seq_length, args.gen_n, args.disc_n, args.adv_n
 
 #   Modularized Training
 
@@ -173,7 +174,7 @@ def train_adversarial(sess, generator, discriminator, rollout, dis_data_loader, 
 def main():
     #Get user input
     parser = create_parser()
-    files, seq_length, gen_n, disc_n, adv_n = assign_parser_args(parser.parse_args())
+    files, vocab_size, seq_length, gen_n, disc_n, adv_n = assign_parser_args(parser.parse_args())
 
     # Initialize the random seed
     random.seed(SEED)
