@@ -50,20 +50,20 @@ obama_files["eval_file"] =  'obama/eval_file.txt'
 haiku_files = {}
 haiku_files["log_file"] =  "haiku/haiku_log.txt"
 haiku_files["positive_file"] = 'haiku/haiku_to_int.train.txt'
-haiku_files["negative_file"] = 'haiku/generator_sample.txt
+haiku_files["negative_file"] = 'haiku/generator_sample.txt'
 haiku_files["valid_file"] = "haiku/haiku_to_int.valid.txt"
 haiku_files["eval_file"] =  'haiku/eval_file.txt'
 
 #  Create a parser to parse user input
 def create_parser():
     parser = argparse.ArgumentParser(description='Program for running several SeqGan applications.')
-    parser.add_argument('app', metavar='Application' type=string, default = 'obama',
+    parser.add_argument('app', metavar='application' type=string, default = 'obama',
                     help='Enter either \'obama\' or \'haiku\'')
-    parser.add_argument('gen_n', metavar = 'Pretrain Generator N', type = int, default = 120
+    parser.add_argument('gen_n', type = int, default = 120,
                     help='Number of generator pre-training steps')
-    parser.add_argument('disc_n', metavar = 'Pretrain Discriminator N', type = int, default = 50
+    parser.add_argument('disc_n', type = int, default = 50,
                     help='Number of discriminator pre-training steps')
-    parser.add_argument('adv_n', metavar = 'Adversarial N', type = int, default = 200
+    parser.add_argument('adv_n', type = int, default = 200,
                     help='Number of adversarial pre-training steps')
     return parser
 
