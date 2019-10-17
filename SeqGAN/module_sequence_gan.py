@@ -114,6 +114,7 @@ def main():
     # Initialize the random seed
     random.seed(SEED)
     np.random.seed(SEED)
+    tf.set_random_seed(SEED)
     assert START_TOKEN == 0
 
     # Initialize the data loaders
@@ -141,7 +142,7 @@ def main():
     log = open(log_file, 'w')
 
     # Pre_train the generator with MLE. 
-    pre_train_generator(sess, generator, gen_data_loader, likelihood_data_loader, eval_file, valid_file, log, PRE_EPOCH_NUM):
+    pre_train_generator(sess, generator, gen_data_loader, likelihood_data_loader, eval_file, valid_file, log, PRE_EPOCH_NUM)
     print('Start pre-training discriminator...')
     # Train 3 epoch on the generated data and do this for 50 times
     train_discriminator(sess, generator, discriminator, dis_data_loader, negative_file, positive_file, log, 5) #50
