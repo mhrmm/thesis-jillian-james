@@ -156,7 +156,7 @@ def train_adversarial(sess, generator, discriminator, rollout, dis_data_loader, 
         _ = sess.run(generator.g_updates, feed_dict=feed)
 
         # Test
-        if total_batch % 5 == 0 or total_batch == TOTAL_BATCH - 1:
+        if total_batch % 5 == 0 or total_batch == n - 1:
             generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
             likelihood_data_loader.create_batches(files["valid_file"])
             test_loss = target_loss(sess, generator, likelihood_data_loader) 
