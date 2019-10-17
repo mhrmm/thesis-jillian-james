@@ -15,7 +15,7 @@ EMB_DIM = 32 # embedding dimension
 HIDDEN_DIM = 32 # hidden state dimension of lstm cell
 SEQ_LENGTH =  50 #20 for haikus # 20 sequence length
 START_TOKEN = 0
-PRE_EPOCH_NUM = 120 #25 for haikus  # 120  supervise (maximum likelihood estimation) epochs
+PRE_EPOCH_NUM = 5 #25 for haikus  # 120  supervise (maximum likelihood estimation) epochs
 SEED = 88
 BATCH_SIZE = 64
 
@@ -32,7 +32,7 @@ dis_batch_size = 64
 #########################################################################################
 #  Basic Training Parameters
 #########################################################################################
-TOTAL_BATCH =  200 # 100 for haikus # 200
+TOTAL_BATCH =  5 # 100 for haikus # 200
 log_file =  "obama/obama_log.txt"            # 'save/experiment-log.txt' "haiku/haiku_log.txt"
 positive_file =  'obama/obama_to_int.train.txt'     # 'save/real_data.txt' 'haiku/haiku_to_int.train.txt'
 negative_file = 'obama/generator_sample.txt' # 'save/generator_sample.txt' 'haiku/generator_sample.txt
@@ -81,8 +81,7 @@ def pre_train_epoch(sess, trainable_model, data_loader):
     return np.mean(supervised_g_losses)
 
 
-def pre_train_generator(sess, generator, gen_data_loader, likelihood_data_loader, eval_file, valid_file, log_file, num_epochs):
-    log = open(log_file, 'w')
+def pre_train_generator(sess, generator, gen_data_loader, likelihood_data_loader, eval_file, valid_file, log, num_epochs):
     print('Start pre-training...')
     log.write('pre-training...\n')
     for epoch in range(num_epochs):
@@ -95,7 +94,7 @@ def pre_train_generator(sess, generator, gen_data_loader, likelihood_data_loader
             buffer = 'epoch:\t'+ str(epoch) + '\tloss:\t' + str(loss) + '\n'
             log.write(buffer)
 
-def train_discriminator(sess, generator, discriminator, dis_dataloader, negative_file, positive_file, log_file, n):
+def train_discriminator(sess, generator, discriminator, dis_data_loader, negative_file, positive_file, log, n):
     for _ in range(n):
         generate_samples(sess, generator, BATCH_SIZE, generated_num, negative_file)
         dis_data_loader.load_train_data(positive_file, negative_file)
@@ -138,11 +137,14 @@ def main():
     # Create batches from the positive file.
     gen_data_loader.create_batches(positive_file)
 
+    # Open log file for writing
+    log = open(log_file, 'w')
+
     # Pre_train the generator with MLE. 
-    pre_train_generator(sess, generator, gen_data_loader, likelihood_data_loader, eval_file, valid_file, log_file, PRE_EPOCH_NUM):
+    pre_train_generator(sess, generator, gen_data_loader, likelihood_data_loader, eval_file, valid_file, log, PRE_EPOCH_NUM):
     print('Start pre-training discriminator...')
     # Train 3 epoch on the generated data and do this for 50 times
-    train_discriminator(sess, generator, discriminator, dis_dataloader, negative_file, positive_file, log_file, 50)
+    train_discriminator(sess, generator, discriminator, dis_data_loader, negative_file, positive_file, log, 5) #50
     #Set rollout
     rollout = ROLLOUT(generator, 0.8)
 
@@ -162,13 +164,14 @@ def main():
             likelihood_data_loader.create_batches(valid_file)
             test_loss = target_loss(sess, generator, likelihood_data_loader) 
             print("total_batch: ", total_batch, "test_loss: ", test_loss)
+            buffer = "total_batch: " + str(total_batch) + "test_loss: " + str(test_loss)
             log.write(buffer)
 
         # Update roll-out parameters
         rollout.update_params()
 
         # Train the discriminator for 5 steps
-            train_discriminator(sess, generator, discriminator, dis_dataloader, negative_file, positive_file, log_file, 5)
+        train_discriminator(sess, generator, discriminator, dis_data_loader, negative_file, positive_file, log, 5)
 
     log.close()
 

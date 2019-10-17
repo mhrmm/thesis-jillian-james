@@ -15,7 +15,7 @@ EMB_DIM = 32 # embedding dimension
 HIDDEN_DIM = 32 # hidden state dimension of lstm cell
 SEQ_LENGTH =  50 #20 for haikus # 20 sequence length
 START_TOKEN = 0
-PRE_EPOCH_NUM = 120 #25 for haikus  # 120  supervise (maximum likelihood estimation) epochs
+PRE_EPOCH_NUM = 5 #25 for haikus  # 120  supervise (maximum likelihood estimation) epochs
 SEED = 88
 BATCH_SIZE = 64
 
@@ -32,7 +32,7 @@ dis_batch_size = 64
 #########################################################################################
 #  Basic Training Parameters
 #########################################################################################
-TOTAL_BATCH =  200 # 100 for haikus # 200
+TOTAL_BATCH =  5 # 100 for haikus # 200
 log_file =  "obama/obama_log.txt"            # 'save/experiment-log.txt' "haiku/haiku_log.txt"
 positive_file =  'obama/obama_to_int.train.txt'     # 'save/real_data.txt' 'haiku/haiku_to_int.train.txt'
 negative_file = 'obama/generator_sample.txt' # 'save/generator_sample.txt' 'haiku/generator_sample.txt
@@ -131,7 +131,7 @@ def main():
 
     print('Start pre-training discriminator...')
     # Train 3 epoch on the generated data and do this for 50 times
-    for _ in range(50):
+    for _ in range(5):
         generate_samples(sess, generator, BATCH_SIZE, generated_num, negative_file)
         dis_data_loader.load_train_data(positive_file, negative_file)
         for _ in range(3):
