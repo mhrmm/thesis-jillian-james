@@ -57,7 +57,7 @@ haiku_files["eval_file"] =  'haiku/eval_file.txt'
 #  Create a parser to parse user input
 def create_parser():
     parser = argparse.ArgumentParser(description='Program for running several SeqGan applications.')
-    parser.add_argument('app', metavar='application' type=string, default = 'obama',
+    parser.add_argument('app', metavar='application', type=str, default = 'obama',
                     help='Enter either \'obama\' or \'haiku\'')
     parser.add_argument('gen_n', type = int, default = 120,
                     help='Number of generator pre-training steps')
@@ -69,7 +69,7 @@ def create_parser():
 
 def assign_parser_args(args):
     # Need to add functionality to allow user-specified N to be used in training
-    if args['app'] == 'haiku':
+    if args.app == 'haiku':
         files = haiku_files
     else:
         files = obama_files
