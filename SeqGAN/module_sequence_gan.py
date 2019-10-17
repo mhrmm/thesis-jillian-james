@@ -7,6 +7,7 @@ from discriminator import Discriminator
 from rollout import ROLLOUT
 from target_lstm import TARGET_LSTM
 import pickle
+import argparse
 
 #########################################################################################
 #  Generator  Hyper-parameters
@@ -33,14 +34,48 @@ dis_batch_size = 64
 #  Basic Training Parameters
 #########################################################################################
 TOTAL_BATCH =  5 # 100 for haikus # 200
-log_file =  "obama/obama_log.txt"            # 'save/experiment-log.txt' "haiku/haiku_log.txt"
-positive_file =  'obama/obama_to_int.train.txt'     # 'save/real_data.txt' 'haiku/haiku_to_int.train.txt'
-negative_file = 'obama/generator_sample.txt' # 'save/generator_sample.txt' 'haiku/generator_sample.txt
-valid_file = "obama/obama_to_int.valid.txt" # "haiku/haiku_to_int.valid.txt"
-eval_file =  'obama/eval_file.txt'         # 'save/eval_file.txt' 'haiku/eval_file.txt'
 generated_num = 10000 
 vocab_size =  12389 #5000
 
+#########################################################################################
+#  Grouping Files for Parser
+#########################################################################################
+obama_files = {}
+obama_files["log_file"] =  "obama/obama_log.txt"
+obama_files["positive_file"] =  'obama/obama_to_int.train.txt'
+obama_files["negative_file"] = 'obama/generator_sample.txt'
+obama_files["valid_file"] = "obama/obama_to_int.valid.txt"
+obama_files["eval_file"] =  'obama/eval_file.txt'
+
+haiku_files = {}
+haiku_files["log_file"] =  "haiku/haiku_log.txt"
+haiku_files["positive_file"] = 'haiku/haiku_to_int.train.txt'
+haiku_files["negative_file"] = 'haiku/generator_sample.txt
+haiku_files["valid_file"] = "haiku/haiku_to_int.valid.txt"
+haiku_files["eval_file"] =  'haiku/eval_file.txt'
+
+#  Create a parser to parse user input
+def create_parser():
+    parser = argparse.ArgumentParser(description='Program for running several SeqGan applications.')
+    parser.add_argument('app', metavar='Application' type=string, default = 'obama',
+                    help='Enter either \'obama\' or \'haiku\'')
+    parser.add_argument('gen_n', metavar = 'Pretrain Generator N', type = int, default = 120
+                    help='Number of generator pre-training steps')
+    parser.add_argument('disc_n', metavar = 'Pretrain Discriminator N', type = int, default = 50
+                    help='Number of discriminator pre-training steps')
+    parser.add_argument('adv_n', metavar = 'Adversarial N', type = int, default = 200
+                    help='Number of adversarial pre-training steps')
+    return parser
+
+def assign_parser_args(args):
+    # Need to add functionality to allow user-specified N to be used in training
+    if args['app'] == 'haiku':
+        files = haiku_files
+    else:
+        files = obama_files
+    return files
+
+#   Modularized Training
 
 def generate_samples(sess, trainable_model, batch_size, generated_num, output_file):
     # Generate Samples
@@ -81,23 +116,23 @@ def pre_train_epoch(sess, trainable_model, data_loader):
     return np.mean(supervised_g_losses)
 
 
-def pre_train_generator(sess, generator, gen_data_loader, likelihood_data_loader, eval_file, valid_file, log, num_epochs):
+def pre_train_generator(sess, generator, gen_data_loader, likelihood_data_loader, files, log, num_epochs):
     print('Start pre-training...')
     log.write('pre-training...\n')
     for epoch in range(num_epochs):
         loss = pre_train_epoch(sess, generator, gen_data_loader)
         if epoch % 5 == 0:
-            generate_samples(sess, generator, BATCH_SIZE, generated_num, eval_file)
-            likelihood_data_loader.create_batches(valid_file)
+            generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
+            likelihood_data_loader.create_batches(files["valid_file"])
             test_loss = target_loss(sess, generator, likelihood_data_loader)
             print('pre-train epoch ', epoch, 'test_loss ', test_loss)
             buffer = 'epoch:\t'+ str(epoch) + '\tloss:\t' + str(loss) + '\n'
             log.write(buffer)
 
-def train_discriminator(sess, generator, discriminator, dis_data_loader, negative_file, positive_file, log, n):
+def train_discriminator(sess, generator, discriminator, dis_data_loader, files, log, n):
     for _ in range(n):
-        generate_samples(sess, generator, BATCH_SIZE, generated_num, negative_file)
-        dis_data_loader.load_train_data(positive_file, negative_file)
+        generate_samples(sess, generator, BATCH_SIZE, generated_num, files["negative_file"])
+        dis_data_loader.load_train_data(files["positive_file"], files["negative_file"])
         for _ in range(3):
             dis_data_loader.reset_pointer()
             for it in range(dis_data_loader.num_batch):
@@ -109,8 +144,38 @@ def train_discriminator(sess, generator, discriminator, dis_data_loader, negativ
                 }
                 _ = sess.run(discriminator.train_op, feed)
 
+def train_adversarial(sess, generator, discriminator, rollout, dis_data_loader, likelihood_data_loader, files, log, n):
+    print('#########################################################################')
+    print('Start Adversarial Training...')
+    log.write('adversarial training...\n')
+    for total_batch in range(n):
+        # Train the generator for one step
+        samples = generator.generate(sess)
+        rewards = rollout.get_reward(sess, samples, 16, discriminator) #I might actually need to change the value 16 here.
+        feed = {generator.x: samples, generator.rewards: rewards}
+        _ = sess.run(generator.g_updates, feed_dict=feed)
+
+        # Test
+        if total_batch % 5 == 0 or total_batch == TOTAL_BATCH - 1:
+            generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
+            likelihood_data_loader.create_batches(files["valid_file"])
+            test_loss = target_loss(sess, generator, likelihood_data_loader) 
+            print("total_batch: ", total_batch, "test_loss: ", test_loss)
+            buffer = "total_batch: " + str(total_batch) + "test_loss: " + str(test_loss)
+            log.write(buffer)
+
+        # Update roll-out parameters
+        rollout.update_params()
+
+        # Train the discriminator for 5 steps
+        train_discriminator(sess, generator, discriminator, dis_data_loader, files, log, 5)
+
 
 def main():
+    #Get user input
+    parser = create_parser()
+    files = assign_parser_args(parser.parse_args())
+
     # Initialize the random seed
     random.seed(SEED)
     np.random.seed(SEED)
@@ -135,44 +200,23 @@ def main():
     sess = tf.Session(config=config)
     sess.run(tf.global_variables_initializer())
 
+
     # Create batches from the positive file.
-    gen_data_loader.create_batches(positive_file)
+    gen_data_loader.create_batches(files["positive_file"])
 
     # Open log file for writing
-    log = open(log_file, 'w')
+    log = open(files['log_file'], 'w')
 
     # Pre_train the generator with MLE. 
-    pre_train_generator(sess, generator, gen_data_loader, likelihood_data_loader, eval_file, valid_file, log, PRE_EPOCH_NUM)
+    pre_train_generator(sess, generator, gen_data_loader, likelihood_data_loader, files, log, PRE_EPOCH_NUM)
     print('Start pre-training discriminator...')
-    # Train 3 epoch on the generated data and do this for 50 times
-    train_discriminator(sess, generator, discriminator, dis_data_loader, negative_file, positive_file, log, 5) #50
-    #Set rollout
+
+    # Do the discriminator training steps
+    train_discriminator(sess, generator, discriminator, dis_data_loader, files, log, 5) #50
+    
+    # Do the adversarial training steps
     rollout = ROLLOUT(generator, 0.8)
-
-    print('#########################################################################')
-    print('Start Adversarial Training...')
-    log.write('adversarial training...\n')
-    for total_batch in range(TOTAL_BATCH):
-        # Train the generator for one step
-        samples = generator.generate(sess)
-        rewards = rollout.get_reward(sess, samples, 16, discriminator) #I might actually need to change the value 16 here.
-        feed = {generator.x: samples, generator.rewards: rewards}
-        _ = sess.run(generator.g_updates, feed_dict=feed)
-
-        # Test
-        if total_batch % 5 == 0 or total_batch == TOTAL_BATCH - 1:
-            generate_samples(sess, generator, BATCH_SIZE, generated_num, eval_file)
-            likelihood_data_loader.create_batches(valid_file)
-            test_loss = target_loss(sess, generator, likelihood_data_loader) 
-            print("total_batch: ", total_batch, "test_loss: ", test_loss)
-            buffer = "total_batch: " + str(total_batch) + "test_loss: " + str(test_loss)
-            log.write(buffer)
-
-        # Update roll-out parameters
-        rollout.update_params()
-
-        # Train the discriminator for 5 steps
-        train_discriminator(sess, generator, discriminator, dis_data_loader, negative_file, positive_file, log, 5)
+    train_adversarial(sess, generator, discriminator, rollout, dis_data_loader, likelihood_data_loader, files, log, TOTAL_BATCH)
 
     log.close()
 
