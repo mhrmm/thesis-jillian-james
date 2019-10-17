@@ -86,10 +86,10 @@ def main():
     tf.set_random_seed(SEED)
     assert START_TOKEN == 0
 
-    gen_data_loader = Gen_Data_loader(BATCH_SIZE)
-    likelihood_data_loader = Gen_Data_loader(BATCH_SIZE) # For testing
+    gen_data_loader = Gen_Data_loader(BATCH_SIZE,SEQ_LENGTH)
+    likelihood_data_loader = Gen_Data_loader(BATCH_SIZE, SEQ_LENGTH) # For testing
     vocab_size =  12389 #5000
-    dis_data_loader = Dis_dataloader(BATCH_SIZE)
+    dis_data_loader = Dis_dataloader(BATCH_SIZE, SEQ_LENGTH)
 
 
     generator = Generator(vocab_size, BATCH_SIZE, EMB_DIM, HIDDEN_DIM, SEQ_LENGTH, START_TOKEN)

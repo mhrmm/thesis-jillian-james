@@ -14,7 +14,7 @@ import argparse
 ######################################################################################
 EMB_DIM = 32 # embedding dimension
 HIDDEN_DIM = 32 # hidden state dimension of lstm cell
-SEQ_LENGTH =  50 #20 for haikus # 20 sequence length
+# SEQ_LENGTH =  50 #20 for haikus # 20 sequence length
 START_TOKEN = 0
 PRE_EPOCH_NUM = 5 #25 for haikus  # 120  supervise (maximum likelihood estimation) epochs
 SEED = 88
@@ -33,7 +33,7 @@ dis_batch_size = 64
 #########################################################################################
 #  Basic Training Parameters
 #########################################################################################
-TOTAL_BATCH =  5 # 100 for haikus # 200
+# TOTAL_BATCH =  5 # 100 for haikus # 200
 generated_num = 10000 
 vocab_size =  12389 #5000
 
@@ -70,10 +70,12 @@ def create_parser():
 def assign_parser_args(args):
     # Need to add functionality to allow user-specified N to be used in training
     if args.app == 'haiku':
+        seq_length = 20
         files = haiku_files
     else:
+        seq_length = 50
         files = obama_files
-    return files
+    return files, seq_length, args.gen_n, args.disc_n, args.adv_n
 
 #   Modularized Training
 
@@ -174,7 +176,7 @@ def train_adversarial(sess, generator, discriminator, rollout, dis_data_loader, 
 def main():
     #Get user input
     parser = create_parser()
-    files = assign_parser_args(parser.parse_args())
+    files, seq_length, gen_n, disc_n, adv_n = assign_parser_args(parser.parse_args())
 
     # Initialize the random seed
     random.seed(SEED)
@@ -183,15 +185,15 @@ def main():
     assert START_TOKEN == 0
 
     # Initialize the data loaders
-    gen_data_loader = Gen_Data_loader(BATCH_SIZE)
-    likelihood_data_loader = Gen_Data_loader(BATCH_SIZE) # For testing
+    gen_data_loader = Gen_Data_loader(BATCH_SIZE, seq_length)
+    likelihood_data_loader = Gen_Data_loader(BATCH_SIZE, seq_length) # For testing
     dis_data_loader = Dis_dataloader(BATCH_SIZE)
 
     # Initialize the Generator
-    generator = Generator(vocab_size, BATCH_SIZE, EMB_DIM, HIDDEN_DIM, SEQ_LENGTH, START_TOKEN)
+    generator = Generator(vocab_size, BATCH_SIZE, EMB_DIM, HIDDEN_DIM, seq_length, START_TOKEN)
 
     # Initialize the Discriminator
-    discriminator = Discriminator(sequence_length=SEQ_LENGTH, num_classes=2, vocab_size=vocab_size, embedding_size=dis_embedding_dim, 
+    discriminator = Discriminator(sequence_length=seq_length, num_classes=2, vocab_size=vocab_size, embedding_size=dis_embedding_dim, 
                                 filter_sizes=dis_filter_sizes, num_filters=dis_num_filters, l2_reg_lambda=dis_l2_reg_lambda)
 
     # Set session configurations. 
@@ -208,15 +210,15 @@ def main():
     log = open(files['log_file'], 'w')
 
     # Pre_train the generator with MLE. 
-    pre_train_generator(sess, generator, gen_data_loader, likelihood_data_loader, files, log, PRE_EPOCH_NUM)
+    pre_train_generator(sess, generator, gen_data_loader, likelihood_data_loader, files, log, gen_n)
     print('Start pre-training discriminator...')
 
-    # Do the discriminator training steps
-    train_discriminator(sess, generator, discriminator, dis_data_loader, files, log, 5) #50
+    # Do the discriminator pre-training steps
+    train_discriminator(sess, generator, discriminator, dis_data_loader, files, log, disc_n)
     
     # Do the adversarial training steps
     rollout = ROLLOUT(generator, 0.8)
-    train_adversarial(sess, generator, discriminator, rollout, dis_data_loader, likelihood_data_loader, files, log, TOTAL_BATCH)
+    train_adversarial(sess, generator, discriminator, rollout, dis_data_loader, likelihood_data_loader, files, log, adv_n)
 
     log.close()
 

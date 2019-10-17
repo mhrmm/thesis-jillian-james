@@ -3,7 +3,7 @@ import numpy as np
 np.random.seed(88)
 
 class Gen_Data_loader():
-    def __init__(self, batch_size):
+    def __init__(self, batch_size, seq_length):
         self.batch_size = batch_size
         self.token_stream = []
 
@@ -14,7 +14,7 @@ class Gen_Data_loader():
                 line = line.strip()
                 line = line.split()
                 parse_line = [int(x) for x in line]
-                if len(parse_line) == 50: #Keep as 20 for haiku and other
+                if len(parse_line) == seq_length: #Keep as 20 for haiku and other
                     self.token_stream.append(parse_line)
         self.num_batch = int(len(self.token_stream) / self.batch_size)
         self.token_stream = self.token_stream[:self.num_batch * self.batch_size]
@@ -31,7 +31,7 @@ class Gen_Data_loader():
 
 
 class Dis_dataloader():
-    def __init__(self, batch_size):
+    def __init__(self, batch_size, seq_length):
         self.batch_size = batch_size
         self.sentences = np.array([])
         self.labels = np.array([])
@@ -51,7 +51,7 @@ class Dis_dataloader():
                 line = line.strip()
                 line = line.split()
                 parse_line = [int(x) for x in line]
-                if len(parse_line) == 50: #Keep as 20 for haiku and other
+                if len(parse_line) == seq_length: #Keep as 20 for haiku and other
                     negative_examples.append(parse_line)
         self.sentences = np.array(positive_examples + negative_examples)
 
