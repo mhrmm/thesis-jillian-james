@@ -14,9 +14,7 @@ import argparse
 ######################################################################################
 EMB_DIM = 32 # embedding dimension
 HIDDEN_DIM = 32 # hidden state dimension of lstm cell
-# SEQ_LENGTH =  50 #20 for haikus # 20 sequence length
 START_TOKEN = 0
-PRE_EPOCH_NUM = 5 #25 for haikus  # 120  supervise (maximum likelihood estimation) epochs
 SEED = 88
 BATCH_SIZE = 64
 
@@ -33,7 +31,6 @@ dis_batch_size = 64
 #########################################################################################
 #  Basic Training Parameters
 #########################################################################################
-# TOTAL_BATCH =  5 # 100 for haikus # 200
 generated_num = 10000 
 vocab_size =  12389 #5000
 
