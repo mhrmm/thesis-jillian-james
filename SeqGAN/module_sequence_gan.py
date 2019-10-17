@@ -185,7 +185,7 @@ def main():
     # Initialize the data loaders
     gen_data_loader = Gen_Data_loader(BATCH_SIZE, seq_length)
     likelihood_data_loader = Gen_Data_loader(BATCH_SIZE, seq_length) # For testing
-    dis_data_loader = Dis_dataloader(BATCH_SIZE)
+    dis_data_loader = Dis_dataloader(BATCH_SIZE, seq_length)
 
     # Initialize the Generator
     generator = Generator(vocab_size, BATCH_SIZE, EMB_DIM, HIDDEN_DIM, seq_length, START_TOKEN)
