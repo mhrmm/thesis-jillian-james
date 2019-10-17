@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow.python.ops import tensor_array_ops, control_flow_ops
 import numpy as np
-
+np.random.seed(88)
 
 class ROLLOUT(object):
     def __init__(self, lstm, update_rate):

@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+np.random.seed(88)
 
 # An alternative to tf.nn.rnn_cell._linear function, which has been removed in Tensorfow 1.0.1
 # The highway layer is borrowed from https://github.com/mkroutikov/tf-lstm-char-cnn
