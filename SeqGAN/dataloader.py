@@ -1,6 +1,5 @@
 import numpy as np
 
-np.random.seed(88)
 
 class Gen_Data_loader():
     def __init__(self, batch_size, seq_length):
