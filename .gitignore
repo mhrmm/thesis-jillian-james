@@ -1,2 +1,6 @@
 *__pycache__*
 *.DS_Store*
+haiku/haiku_to_int.train.txt
+haiku/haiku_to_int.valid.txt
+obama/obama_to_int.train.txt
+obama/obama_to_int.valid.txt
