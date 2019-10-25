@@ -1,5 +1,6 @@
 
 import random
+import json
 import argparse
 import sys
 
@@ -29,9 +30,8 @@ def main():
             parse_line = [int_to_word[x] for x in line]
             " ".join(parse_line)
             text_ls.append(parse_line)
-    return text_ls
 
-    text_ls_sample = random.choice(text_ls, k = 5)
+    text_ls_sample = random.choices(text_ls, k = 5)
 
     for text in text_ls_sample:
         print(text)
