@@ -14,18 +14,21 @@ def haiku_to_ls(file):
     with open(file, 'r') as f:
         full = []
         haiku = []
+        n = 0
         for line in f:
             if line == "\n":
-                num_stopwords = 20 - len(haiku)
+                num_stopwords = 70 - len(haiku)
                 if num_stopwords > 0:
                     haiku += ["_FILL_"]*num_stopwords
                     full.append(haiku)
+                    n += 1
                 haiku = []
             else:
                 line = line.strip()
-                line = line.split()
+                line = list(line)
                 line.append("_BREAK_")
                 haiku += line
+    print("Size:", n )
     return full
     
 
@@ -37,6 +40,7 @@ def obama_to_ls(file):
     with open(file, 'r') as f:
         full = []
         paragraph = []
+        n = 0
         for line in f:
             if line != "\n":
                 line = line.strip()
@@ -45,6 +49,8 @@ def obama_to_ls(file):
                     num_stopwords = 50 - len(line)
                     paragraph = line + ["_FILL_"]*num_stopwords
                     full.append(paragraph)
+                    n += 1
+    print("Size:", n )
     return full
 
 
