@@ -2,6 +2,7 @@ import json
 import random
 import argparse
 import sys
+import re
 
 
 
@@ -21,14 +22,16 @@ def haiku_to_ls(file):
                 if num_stopwords > 0:
                     haiku += [" _FILL_ "]*num_stopwords
                     full.append(haiku)
-                    n += 1
+                else:
+                    haiku = haiku[:70]
+                    full.append(haiku)
+                n+=1
                 haiku = []
             else:
                 line = line.strip()
-                line = list(line)
+                line = list(line.lower())
                 line.append(" _BREAK_ ")
                 haiku += line
-    print("Size:", n )
     return full
     
 
@@ -44,18 +47,21 @@ def obama_to_ls(file):
         for line in f:
             if line != "\n":
                 line = line.strip()
-                line = line.split()
-                if line != [] and len(line) <= 50:
-                    num_stopwords = 50 - len(line)
-                    paragraph = line + [" _FILL_ "]*num_stopwords
-                    full.append(paragraph)
-                    n += 1
-    print("Size:", n )
+                line = re.findall(r"[\w']+|[.,!?();-]", line.lower())
+                num_stopwords = 50 - len(line)
+                if line != []:
+                    if len(line) < 50:
+                        paragraph = line + [" _FILL_ "]*num_stopwords
+                        full.append(paragraph)
+                    else:
+                        paragraph = line[:50]
+                        full.append(paragraph)
+                    n+= 1
     return full
 
 
 
-def creat_dicts(lines_ls):
+def create_dicts(lines_ls):
     '''
     Creates dictionaries for converting between
     token and integer form for dataloader.
@@ -66,16 +72,14 @@ def creat_dicts(lines_ls):
             all_tokens.append(token)
 
     all_tokens = list(set(all_tokens))
-    random.shuffle(all_tokens)
+    all_tokens = sorted(all_tokens)
     int_to_word, word_to_int = {}, {}
-    integer_form = 0
 
-    for token in all_tokens:
-        word_to_int[token] = integer_form
-        int_to_word[integer_form] = token
-        integer_form += 1
+    for i in range(len(all_tokens)):
+        word_to_int[all_tokens[i]] = i
+        int_to_word[i] = all_tokens[i]
 
-    return word_to_int, int_to_word, integer_form
+    return word_to_int, int_to_word, len(all_tokens)
 
 
 
@@ -141,11 +145,11 @@ def main():
         train_ls = haiku_to_ls("haiku/haiku.train.txt")
         valid_ls = haiku_to_ls("haiku/haiku.valid.txt")
     else:
-        Print("Application must be haiku or obama")
+        print("Application must be haiku or obama")
         sys.exit(0)
 
     # Create dictionaries to map integers to tokens and vice versa
-    word_to_int, int_to_word, vocab_length = creat_dicts(train_ls + valid_ls)
+    word_to_int, int_to_word, vocab_length = create_dicts(train_ls + valid_ls)
     train_as_int_ls = text_ls_to_int_ls(train_ls, word_to_int)
     valid_as_int_ls = text_ls_to_int_ls(valid_ls, word_to_int)
 
@@ -155,6 +159,8 @@ def main():
     else:
         valid_as_int_ls = valid_as_int_ls[:len(train_as_int_ls)]
     print("Vocab length: ", vocab_length)
+    print("Training set length: ", len(train_as_int_ls))
+    print("Testing set length: ", len(valid_as_int_ls))
 
 
     # Write to correct application training and validation files
@@ -173,5 +179,5 @@ def main():
 
 
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()
