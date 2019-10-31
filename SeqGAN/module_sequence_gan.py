@@ -67,11 +67,11 @@ def assign_parser_args(args):
     # Need to add functionality to allow user-specified N to be used in training
     if args.app == 'haiku':
         seq_length = 70
-        vocab_size = 87
+        vocab_size = 60
         files = haiku_files
     else:
-        seq_length = 50
-        vocab_size = 12389
+        seq_length = 40
+        vocab_size = 13405
         files = obama_files
     return files, vocab_size, seq_length, args.gen_n, args.disc_n, args.adv_n
 

@@ -48,13 +48,13 @@ def obama_to_ls(file):
             if line != "\n":
                 line = line.strip()
                 line = re.findall(r"[\w']+|[.,!?();-]", line.lower())
-                num_stopwords = 50 - len(line)
+                num_stopwords = 40 - len(line)
                 if line != []:
-                    if len(line) < 50:
+                    if len(line) < 40:
                         paragraph = line + [" _FILL_ "]*num_stopwords
                         full.append(paragraph)
                     else:
-                        paragraph = line[:50]
+                        paragraph = line[:40]
                         full.append(paragraph)
                     n+= 1
     return full
