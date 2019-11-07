@@ -8,55 +8,53 @@ import re
 
 # Helper functions for converting between text to DataLoader form
 
-def haiku_to_ls(file):
+def haiku_to_ls(f):
     '''
     Makes lists of haikus from haiku file
     '''
-    with open(file, 'r') as f:
-        full = []
-        haiku = []
-        n = 0
-        for line in f:
-            if line == "\n":
-                num_stopwords = 70 - len(haiku)
-                if num_stopwords > 0:
-                    haiku += [" _FILL_ "]*num_stopwords
-                    full.append(haiku)
-                else:
-                    haiku = haiku[:70]
-                    full.append(haiku)
-                n+=1
-                haiku = []
+    full = []
+    haiku = []
+    n = 0
+    for line in f:
+        if line == "\n":
+            num_stopwords = 70 - len(haiku)
+            if num_stopwords > 0:
+                haiku += [" _FILL_ "]*num_stopwords
+                full.append(haiku)
             else:
-                line = line.strip()
-                line = list(line.lower())
-                line.append(" _BREAK_ ")
-                haiku += line
+                haiku = haiku[:70]
+                full.append(haiku)
+            n+=1
+            haiku = []
+        else:
+            line = line.strip()
+            line = list(line.lower())
+            line.append(" _BREAK_ ")
+            haiku += line
     return full
     
 
 
-def obama_to_ls(file):
+def obama_to_ls(f):
     '''
     Makes list of Obama speach paragraphs from Obama file.
     '''
-    with open(file, 'r') as f:
-        full = []
-        paragraph = []
-        n = 0
-        for line in f:
-            if line != "\n":
-                line = line.strip()
-                line = re.findall(r"[\w']+|[.,!?();-]", line.lower())
-                num_stopwords = 40 - len(line)
-                if line != []:
-                    if len(line) < 40:
-                        paragraph = line + [" _FILL_ "]*num_stopwords
-                        full.append(paragraph)
-                    else:
-                        paragraph = line[:40]
-                        full.append(paragraph)
-                    n+= 1
+    full = []
+    paragraph = []
+    n = 0
+    for line in f:
+        if line != "\n":
+            line = line.strip()
+            line = re.findall(r"[\w']+|[.,!?();-]", line.lower())
+            num_stopwords = 40 - len(line)
+            if line != []:
+                if len(line) < 40:
+                    paragraph = line + [" _FILL_ "]*num_stopwords
+                    full.append(paragraph)
+                else:
+                    paragraph = line[:40]
+                    full.append(paragraph)
+                n+= 1
     return full
 
 
@@ -130,8 +128,6 @@ def write_dict_to_file(filename, d):
 
 
 
-
-
 def main():
     # Take in application from user and use it to create training and validation data
     parser = argparse.ArgumentParser(description='Program for converting a datafile to dataloader form.')
@@ -139,11 +135,11 @@ def main():
                         help='Enter either \'obama\' or \'haiku\'')
     args = parser.parse_args()
     if args.app == 'obama':
-        train_ls = obama_to_ls("obama/obama.train.txt")
-        valid_ls = obama_to_ls("obama/obama.valid.txt")
+        train_ls = obama_to_ls(open("obama/obama.train.txt", 'r'))
+        valid_ls = obama_to_ls(open("obama/obama.valid.txt", 'r'))
     elif args.app == 'haiku': 
-        train_ls = haiku_to_ls("haiku/haiku.train.txt")
-        valid_ls = haiku_to_ls("haiku/haiku.valid.txt")
+        train_ls = haiku_to_ls(open("haiku/haiku.train.txt", 'r'))
+        valid_ls = haiku_to_ls(open("haiku/haiku.valid.txt", 'r'))
     else:
         print("Application must be haiku or obama")
         sys.exit(0)
@@ -177,7 +173,5 @@ def main():
         write_lists_to_file("haiku/haiku_to_int.valid.txt", valid_as_int_ls)
 
 
-
-
-# if __name__ == '__main__':
-#     main()
+if __name__ == '__main__':
+    main()

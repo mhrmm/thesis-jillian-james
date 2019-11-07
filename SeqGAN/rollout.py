@@ -16,6 +16,7 @@ class ROLLOUT(object):
         self.start_token = tf.identity(self.lstm.start_token)
         self.learning_rate = self.lstm.learning_rate
 
+        ######################################################################################################
         self.g_embeddings = tf.identity(self.lstm.g_embeddings)
         self.g_recurrent_unit = self.create_recurrent_unit()  # maps h_tm1 to h_t for generator
         self.g_output_unit = self.create_output_unit()  # maps h_t to o_t (output token logits)
@@ -74,6 +75,7 @@ class ROLLOUT(object):
         self.gen_x = self.gen_x.stack()  # seq_length x batch_size
         self.gen_x = tf.transpose(self.gen_x, perm=[1, 0])  # batch_size x seq_length
 
+
     def get_reward(self, sess, input_x, rollout_num, discriminator):
         rewards = []
         for i in range(rollout_num):
@@ -102,6 +104,23 @@ class ROLLOUT(object):
         rewards = np.transpose(np.array(rewards)) / (1.0 * rollout_num)  # batch_size x seq_length
         return rewards
 
+
+    def create_gate(self, w, u, b):
+        # New gate
+        gate = tf.sigmoid(
+                tf.matmul(x, w) +
+                tf.matmul(previous_hidden_state, u) + b
+            )
+        return gate
+
+    def create_memory_cell(self, w, u, b):
+        # New Memory Cell
+        cell = tf.nn.tanh(
+                tf.matmul(x, w) +
+                tf.matmul(previous_hidden_state, u) + b
+            )
+
+
     def create_recurrent_unit(self):
         # Weights and Bias for input and hidden tensor
         self.Wi = tf.identity(self.lstm.Wi)
@@ -120,32 +139,13 @@ class ROLLOUT(object):
         self.Uc = tf.identity(self.lstm.Uc)
         self.bc = tf.identity(self.lstm.bc)
 
-        def unit(x, hidden_memory_tm1):
+        def unit(self, x, hidden_memory_tm1):
             previous_hidden_state, c_prev = tf.unstack(hidden_memory_tm1)
 
-            # Input Gate
-            i = tf.sigmoid(
-                tf.matmul(x, self.Wi) +
-                tf.matmul(previous_hidden_state, self.Ui) + self.bi
-            )
-
-            # Forget Gate
-            f = tf.sigmoid(
-                tf.matmul(x, self.Wf) +
-                tf.matmul(previous_hidden_state, self.Uf) + self.bf
-            )
-
-            # Output Gate
-            o = tf.sigmoid(
-                tf.matmul(x, self.Wog) +
-                tf.matmul(previous_hidden_state, self.Uog) + self.bog
-            )
-
-            # New Memory Cell
-            c_ = tf.nn.tanh(
-                tf.matmul(x, self.Wc) +
-                tf.matmul(previous_hidden_state, self.Uc) + self.bc
-            )
+            i = create_gate(self.Wi, self.Ui, self.bi) #input gate
+            f = create_gate(self.Wf, self.Uf, self.bf) #forget gate
+            o = create_gate(self.Wog, self.Uog, self.bog) #output gate
+            c_ = create_memory_cell(self.Wc, self.Uc, self.bc) #memory cell
 
             # Final Memory cell
             c = f * c_prev + i * c_
@@ -175,32 +175,13 @@ class ROLLOUT(object):
         self.Uc = self.update_rate * self.Uc + (1 - self.update_rate) * tf.identity(self.lstm.Uc)
         self.bc = self.update_rate * self.bc + (1 - self.update_rate) * tf.identity(self.lstm.bc)
 
-        def unit(x, hidden_memory_tm1):
+        def unit(self, x, hidden_memory_tm1):
             previous_hidden_state, c_prev = tf.unstack(hidden_memory_tm1)
 
-            # Input Gate
-            i = tf.sigmoid(
-                tf.matmul(x, self.Wi) +
-                tf.matmul(previous_hidden_state, self.Ui) + self.bi
-            )
-
-            # Forget Gate
-            f = tf.sigmoid(
-                tf.matmul(x, self.Wf) +
-                tf.matmul(previous_hidden_state, self.Uf) + self.bf
-            )
-
-            # Output Gate
-            o = tf.sigmoid(
-                tf.matmul(x, self.Wog) +
-                tf.matmul(previous_hidden_state, self.Uog) + self.bog
-            )
-
-            # New Memory Cell
-            c_ = tf.nn.tanh(
-                tf.matmul(x, self.Wc) +
-                tf.matmul(previous_hidden_state, self.Uc) + self.bc
-            )
+            i = create_gate(self.Wi, self.Ui, self.bi) #input gate
+            f = create_gate(self.Wf, self.Uf, self.bf) #forget gate
+            o = create_gate(self.Wog, self.Uog, self.bog) #output gate
+            c_ = create_memory_cell(self.Wc, self.Uc, self.bc) #memory cell
 
             # Final Memory cell
             c = f * c_prev + i * c_
@@ -209,7 +190,6 @@ class ROLLOUT(object):
             current_hidden_state = o * tf.nn.tanh(c)
 
             return tf.stack([current_hidden_state, c])
-
         return unit
 
     def create_output_unit(self):
