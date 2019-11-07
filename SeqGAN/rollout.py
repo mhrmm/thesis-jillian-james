@@ -15,8 +15,6 @@ class ROLLOUT(object):
         self.sequence_length = self.lstm.sequence_length
         self.start_token = tf.identity(self.lstm.start_token)
         self.learning_rate = self.lstm.learning_rate
-
-        ######################################################################################################
         self.g_embeddings = tf.identity(self.lstm.g_embeddings)
         self.g_recurrent_unit = self.create_recurrent_unit()  # maps h_tm1 to h_t for generator
         self.g_output_unit = self.create_output_unit()  # maps h_t to o_t (output token logits)
@@ -192,6 +190,7 @@ class ROLLOUT(object):
             return tf.stack([current_hidden_state, c])
         return unit
 
+
     def create_output_unit(self):
         self.Wo = tf.identity(self.lstm.Wo)
         self.bo = tf.identity(self.lstm.bo)
@@ -204,6 +203,7 @@ class ROLLOUT(object):
             return logits
 
         return unit
+
 
     def update_output_unit(self):
         self.Wo = self.update_rate * self.Wo + (1 - self.update_rate) * tf.identity(self.lstm.Wo)
