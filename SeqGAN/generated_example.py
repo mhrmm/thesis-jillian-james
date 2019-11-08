@@ -1,5 +1,6 @@
-
+import datautil
 import random
+import ntlk
 import json
 import argparse
 import sys
@@ -15,10 +16,12 @@ def main():
 
     if args.app == "haiku":
         filename = "haiku/generator_sample.txt"
+        references = datautil.haiku_to_ls(open('haiku/haiku.valid.txt', 'r'))
         with open("haiku/int_to_word.json", 'r') as f:
             int_to_word = json.load(f)
     else:
         filename = "obama/generator_sample.txt"
+        references = datautil.obama_to_ls(open('obama/obama.valid.txt', 'r'))
         with open("obama/int_to_word.json", 'r') as f:
             int_to_word = json.load(f)
 
@@ -34,7 +37,11 @@ def main():
     text_ls_sample = random.choices(text_ls, k = 5)
 
     for text in text_ls_sample:
+        print("--------------------------------")
         print(text)
+        BlEUscore = nltk.translate.bleu_score.sentence_bleu(references, text)
+        print("BLEUscore is: ", BlEUscore)
+
         print()
 
 if __name__ == '__main__':
