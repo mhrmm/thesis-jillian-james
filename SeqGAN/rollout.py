@@ -58,7 +58,7 @@ class ROLLOUT(object):
             gen_x = gen_x.write(i, next_token)  # indices, batch_size
             return i + 1, x_tp1, h_t, given_num, gen_x
         
-        ta_emb_x, ta_x, gen_x  = _create_tensor_array_ops():
+        ta_emb_x, ta_x, gen_x  = _create_tensor_array_ops()
 
         i, x_t, h_tm1, given_num, self.gen_x = control_flow_ops.while_loop(
             cond=lambda i, _1, _2, given_num, _4: i < given_num,
