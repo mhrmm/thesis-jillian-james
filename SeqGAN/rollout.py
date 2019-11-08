@@ -103,11 +103,11 @@ class ROLLOUT(object):
         return rewards
 
 
-    def create_gate(self, w, u, b):
+    def create_gate(self, w, u, b, phs):
         # New gate
         gate = tf.sigmoid(
                 tf.matmul(x, w) +
-                tf.matmul(previous_hidden_state, u) + b
+                tf.matmul(phs, u) + b
             )
         return gate
 
@@ -115,8 +115,9 @@ class ROLLOUT(object):
         # New Memory Cell
         cell = tf.nn.tanh(
                 tf.matmul(x, w) +
-                tf.matmul(previous_hidden_state, u) + b
+                tf.matmul(phs, u) + b
             )
+        return cell
 
 
     def create_recurrent_unit(self):
@@ -140,10 +141,10 @@ class ROLLOUT(object):
         def unit(self, x, hidden_memory_tm1):
             previous_hidden_state, c_prev = tf.unstack(hidden_memory_tm1)
 
-            i = create_gate(self.Wi, self.Ui, self.bi) #input gate
-            f = create_gate(self.Wf, self.Uf, self.bf) #forget gate
-            o = create_gate(self.Wog, self.Uog, self.bog) #output gate
-            c_ = create_memory_cell(self.Wc, self.Uc, self.bc) #memory cell
+            i = create_gate(self.Wi, self.Ui, self.bi, previous_hidden_state) #input gate
+            f = create_gate(self.Wf, self.Uf, self.bf, previous_hidden_state) #forget gate
+            o = create_gate(self.Wog, self.Uog, self.bog, previous_hidden_state) #output gate
+            c_ = create_memory_cell(self.Wc, self.Uc, self.bc, previous_hidden_state) #memory cell
 
             # Final Memory cell
             c = f * c_prev + i * c_
@@ -176,10 +177,10 @@ class ROLLOUT(object):
         def unit(self, x, hidden_memory_tm1):
             previous_hidden_state, c_prev = tf.unstack(hidden_memory_tm1)
 
-            i = create_gate(self.Wi, self.Ui, self.bi) #input gate
-            f = create_gate(self.Wf, self.Uf, self.bf) #forget gate
-            o = create_gate(self.Wog, self.Uog, self.bog) #output gate
-            c_ = create_memory_cell(self.Wc, self.Uc, self.bc) #memory cell
+            i = create_gate(self.Wi, self.Ui, self.bi, previous_hidden_state) #input gate
+            f = create_gate(self.Wf, self.Uf, self.bf, previous_hidden_state) #forget gate
+            o = create_gate(self.Wog, self.Uog, self.bog, previous_hidden_state) #output gate
+            c_ = create_memory_cell(self.Wc, self.Uc, self.bc, previous_hidden_state) #memory cell
 
             # Final Memory cell
             c = f * c_prev + i * c_
