@@ -34,6 +34,8 @@ def main():
     for text in text_ls_sample:
         print("--------------------------------")
         print(text)
+    
+    #Calculate BlEUscore for whole corpus (Takes a while)
     BLEUscore = nltk.translate.bleu_score.corpus_bleu([references]*len(generated), generated)
     print()
     print("********" + "Corpus BLEUscore is: " + str(BLEUscore)+ "********")

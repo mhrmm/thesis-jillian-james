@@ -48,7 +48,7 @@ def obama_to_ls(f):
             line = line.strip()
             line = re.findall(r"[\w']+|[.,!?();-]", line.lower())
             num_stopwords = 40 - len(line)
-            if line != [] and len(line) > 10:
+            if line != []:
                 if len(line) < 40:
                     paragraph = line + [" _FILL_ "]*num_stopwords
                     full.append(paragraph)
@@ -142,14 +142,10 @@ def main():
         whole = obama_to_ls(open('obama/input.txt', 'r'))
         train_ls, remainder = train_test_split(whole, test_size = 0.4, shuffle = False)
         valid_ls, test_ls = train_test_split(remainder, test_size = 0.5, shuffle = False)
-        # train_ls = obama_to_ls(open("obama/obama.train.txt", 'r'))
-        # valid_ls = obama_to_ls(open("obama/obama.valid.txt", 'r'))
     elif args.app == 'haiku': 
         whole = haiku_to_ls(open("haiku/input.txt", 'r'))
         train_ls, remainder = train_test_split(whole, test_size = 0.4, shuffle = False)
         valid_ls, test_ls = train_test_split(remainder, test_size = 0.5, shuffle = False)
-        # train_ls = haiku_to_ls(open("haiku/haiku.train.txt", 'r'))
-        # valid_ls = haiku_to_ls(open("haiku/haiku.valid.txt", 'r'))
     else:
         print("Application must be haiku or obama")
         sys.exit(0)
@@ -160,11 +156,6 @@ def main():
     valid_as_int_ls = text_ls_to_int_ls(valid_ls, word_to_int)
     test_as_int_ls = text_ls_to_int_ls(test_ls, word_to_int)
 
-    # # Require that files are the same length
-    # if len(train_as_int_ls) > len(valid_as_int_ls):
-    #     train_as_int_ls = train_as_int_ls[:len(valid_as_int_ls)]
-    # else:
-    #     valid_as_int_ls = valid_as_int_ls[:len(train_as_int_ls)]
     print("Vocab length: ", vocab_length)
     print("Original set length", len(whole))
     print("Training set length: ", len(train_as_int_ls))
