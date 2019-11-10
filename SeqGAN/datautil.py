@@ -1,5 +1,6 @@
 import json
 import random
+from sklearn.model_selection import train_test_split
 import argparse
 import sys
 import re
@@ -47,7 +48,7 @@ def obama_to_ls(f):
             line = line.strip()
             line = re.findall(r"[\w']+|[.,!?();-]", line.lower())
             num_stopwords = 40 - len(line)
-            if line != []:
+            if line != [] and len(line) > 10:
                 if len(line) < 40:
                     paragraph = line + [" _FILL_ "]*num_stopwords
                     full.append(paragraph)
@@ -79,7 +80,10 @@ def create_dicts(lines_ls):
 
     return word_to_int, int_to_word, len(all_tokens)
 
-
+def remove_filler(generated):
+    for j in range(len(generated)):
+        generated[j] = [value for value in generated[j] if value != " _FILL_ "]
+    return generated
 
 def text_ls_to_int_ls(text_ls, word_to_int):
     '''
@@ -97,21 +101,20 @@ def text_ls_to_int_ls(text_ls, word_to_int):
 
 
 
-def int_file_to_text_ls(datafile, int_to_word):
+def int_file_to_text_ls(f, int_to_word):
     '''
     Reads file in dataloader form and converts to text
     using dictionary mappings
     '''
     text_ls = []
-    with open(datafile, 'r') as f:
-        for line in f:
-            line = line.strip()
-            line = line.split()
-            parse_line = [int_to_word[x] for x in line]
-            " ".join(parse_line)
-            text_ls.append(parse_line)
+ 
+    for line in f:
+        line = line.strip()
+        line = line.split()
+        parse_line = [int_to_word[x] for x in line]
+        " ".join(parse_line)
+        text_ls.append(parse_line)
     return text_ls
-
 
 
 def write_lists_to_file(filename, full_lists):
@@ -134,29 +137,39 @@ def main():
     parser.add_argument('app', metavar='application', type=str, default = 'obama',
                         help='Enter either \'obama\' or \'haiku\'')
     args = parser.parse_args()
+    len_train, len_valid, len_test = 0.4, 0.4, 0.2
     if args.app == 'obama':
-        train_ls = obama_to_ls(open("obama/obama.train.txt", 'r'))
-        valid_ls = obama_to_ls(open("obama/obama.valid.txt", 'r'))
+        whole = obama_to_ls(open('obama/input.txt', 'r'))
+        train_ls, remainder = train_test_split(whole, test_size = 0.4, shuffle = False)
+        valid_ls, test_ls = train_test_split(remainder, test_size = 0.5, shuffle = False)
+        # train_ls = obama_to_ls(open("obama/obama.train.txt", 'r'))
+        # valid_ls = obama_to_ls(open("obama/obama.valid.txt", 'r'))
     elif args.app == 'haiku': 
-        train_ls = haiku_to_ls(open("haiku/haiku.train.txt", 'r'))
-        valid_ls = haiku_to_ls(open("haiku/haiku.valid.txt", 'r'))
+        whole = haiku_to_ls(open("haiku/input.txt", 'r'))
+        train_ls, remainder = train_test_split(whole, test_size = 0.4, shuffle = False)
+        valid_ls, test_ls = train_test_split(remainder, test_size = 0.5, shuffle = False)
+        # train_ls = haiku_to_ls(open("haiku/haiku.train.txt", 'r'))
+        # valid_ls = haiku_to_ls(open("haiku/haiku.valid.txt", 'r'))
     else:
         print("Application must be haiku or obama")
         sys.exit(0)
 
     # Create dictionaries to map integers to tokens and vice versa
-    word_to_int, int_to_word, vocab_length = create_dicts(train_ls + valid_ls)
+    word_to_int, int_to_word, vocab_length = create_dicts(train_ls + valid_ls + test_ls)
     train_as_int_ls = text_ls_to_int_ls(train_ls, word_to_int)
     valid_as_int_ls = text_ls_to_int_ls(valid_ls, word_to_int)
+    test_as_int_ls = text_ls_to_int_ls(test_ls, word_to_int)
 
-    # Require that files are the same length
-    if len(train_as_int_ls) > len(valid_as_int_ls):
-        train_as_int_ls = train_as_int_ls[:len(valid_as_int_ls)]
-    else:
-        valid_as_int_ls = valid_as_int_ls[:len(train_as_int_ls)]
+    # # Require that files are the same length
+    # if len(train_as_int_ls) > len(valid_as_int_ls):
+    #     train_as_int_ls = train_as_int_ls[:len(valid_as_int_ls)]
+    # else:
+    #     valid_as_int_ls = valid_as_int_ls[:len(train_as_int_ls)]
     print("Vocab length: ", vocab_length)
+    print("Original set length", len(whole))
     print("Training set length: ", len(train_as_int_ls))
-    print("Testing set length: ", len(valid_as_int_ls))
+    print("Valid set length: ", len(valid_as_int_ls))
+    print("Test set length: ", len(test_as_int_ls))
 
 
     # Write to correct application training and validation files
@@ -166,12 +179,13 @@ def main():
         write_dict_to_file("obama/int_to_word.json", int_to_word)
         write_lists_to_file("obama/obama_to_int.train.txt", train_as_int_ls)
         write_lists_to_file("obama/obama_to_int.valid.txt", valid_as_int_ls)
+        write_lists_to_file("obama/obama_to_int.test.txt", test_as_int_ls)
     else:
         write_dict_to_file("haiku/word_to_int.json", word_to_int)
         write_dict_to_file("haiku/int_to_word.json", int_to_word)
         write_lists_to_file("haiku/haiku_to_int.train.txt", train_as_int_ls)
         write_lists_to_file("haiku/haiku_to_int.valid.txt", valid_as_int_ls)
-
+        write_lists_to_file("haiku/haiku_to_int.test.txt", test_as_int_ls)
 
 if __name__ == '__main__':
     main()
