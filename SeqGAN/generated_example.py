@@ -1,6 +1,6 @@
 import datautil
 import random
-import ntlk
+import nltk
 import json
 import argparse
 import sys
@@ -15,34 +15,30 @@ def main():
     args = parser.parse_args()
 
     if args.app == "haiku":
-        filename = "haiku/generator_sample.txt"
-        references = datautil.haiku_to_ls(open('haiku/haiku.valid.txt', 'r'))
-        with open("haiku/int_to_word.json", 'r') as f:
-            int_to_word = json.load(f)
+        int_to_word = json.load(open("haiku/int_to_word.json", 'r'))
+        generated = datautil.int_file_to_text_ls(open("haiku/generator_sample.txt", 'r'), int_to_word)
+        references = datautil.int_file_to_text_ls(open("haiku/haiku_to_int.test.txt", 'r'), int_to_word)
     else:
-        filename = "obama/generator_sample.txt"
-        references = datautil.obama_to_ls(open('obama/obama.valid.txt', 'r'))
-        with open("obama/int_to_word.json", 'r') as f:
-            int_to_word = json.load(f)
+        int_to_word = json.load(open("obama/int_to_word.json", 'r'))
+        generated = datautil.int_file_to_text_ls(open("obama/generator_sample.txt", 'r'), int_to_word)
+        references = datautil.int_file_to_text_ls(open("obama/obama_to_int.test.txt", 'r'), int_to_word)
 
-    text_ls = []
-    with open(filename, 'r') as f:
-        for line in f:
-            line = line.strip()
-            line = line.split()
-            parse_line = [int_to_word[x] for x in line]
-            " ".join(parse_line)
-            text_ls.append(parse_line)
 
-    text_ls_sample = random.choices(text_ls, k = 5)
+    print("Removing _FILL_ tokens ...")
+    generated = datautil.remove_filler(generated)
+    references = datautil.remove_filler(generated)
+
+
+    text_ls_sample = random.choices(generated, k = 10)
 
     for text in text_ls_sample:
         print("--------------------------------")
         print(text)
-        BlEUscore = nltk.translate.bleu_score.sentence_bleu(references, text)
-        print("BLEUscore is: ", BlEUscore)
-
-        print()
+    
+    #Calculate BlEUscore for whole corpus (Takes a while)
+    BLEUscore = nltk.translate.bleu_score.corpus_bleu([references]*len(generated), generated)
+    print()
+    print("********" + "Corpus BLEUscore is: " + str(BLEUscore)+ "********")
 
 if __name__ == '__main__':
     main()

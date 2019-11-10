@@ -1,10 +1,17 @@
 *__pycache__*
 *.DS_Store*
+SeqGAN/haiku/haiku.train.txt
+SeqGAN/haiku/haiku.valid.txt
+SeqGAN/obama/obama.train.txt
+SeqGAN/obama/obama.valid.txt
 SeqGAN/haiku/haiku_to_int.train.txt
 SeqGAN/haiku/haiku_to_int.valid.txt
+SeqGAN/haiku/haiku_to_int.test.txt
 SeqGAN/obama/obama_to_int.train.txt
 SeqGAN/obama/obama_to_int.valid.txt
+SeqGAN/obama/obama_to_int.test.txt
 SeqGAN/obama/int_to_word.json
 SeqGAN/obama/word_to_int.json
 SeqGAN/haiku/int_to_word.json
 SeqGAN/haiku/word_to_int.json
+SeqGAN/obama/generator_sample.txt
