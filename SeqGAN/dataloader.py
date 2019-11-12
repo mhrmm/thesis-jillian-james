@@ -2,9 +2,10 @@ import numpy as np
 
 
 class Gen_Data_loader():
-    def __init__(self, batch_size):
+    def __init__(self, batch_size, seq_length):
         self.batch_size = batch_size
         self.token_stream = []
+        self.seq_length = seq_length
 
     def create_batches(self, data_file):
         self.token_stream = []
@@ -13,13 +14,11 @@ class Gen_Data_loader():
                 line = line.strip()
                 line = line.split()
                 parse_line = [int(x) for x in line]
-                if len(parse_line) == 20:
+                if len(parse_line) == self.seq_length: #Keep as 20 for haiku and other
                     self.token_stream.append(parse_line)
-        print("######## Created Batches #######")
         self.num_batch = int(len(self.token_stream) / self.batch_size)
         self.token_stream = self.token_stream[:self.num_batch * self.batch_size]
         self.sequence_batch = np.split(np.array(self.token_stream), self.num_batch, 0)
-        print(self.sequence_batch[1].shape)
         self.pointer = 0
 
     def next_batch(self):
@@ -32,10 +31,11 @@ class Gen_Data_loader():
 
 
 class Dis_dataloader():
-    def __init__(self, batch_size):
+    def __init__(self, batch_size, seq_length):
         self.batch_size = batch_size
         self.sentences = np.array([])
         self.labels = np.array([])
+        self.seq_length = seq_length
 
     def load_train_data(self, positive_file, negative_file):
         # Load data
@@ -52,7 +52,7 @@ class Dis_dataloader():
                 line = line.strip()
                 line = line.split()
                 parse_line = [int(x) for x in line]
-                if len(parse_line) == 20:
+                if len(parse_line) == self.seq_length: #Keep as 20 for haiku and other
                     negative_examples.append(parse_line)
         self.sentences = np.array(positive_examples + negative_examples)
 

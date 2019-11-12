@@ -13,9 +13,9 @@ import pickle
 ######################################################################################
 EMB_DIM = 32 # embedding dimension
 HIDDEN_DIM = 32 # hidden state dimension of lstm cell
-SEQ_LENGTH =  20 # 20 sequence length
+SEQ_LENGTH =  50 #20 for haikus # 20 sequence length
 START_TOKEN = 0
-PRE_EPOCH_NUM = 120   # 120  supervise (maximum likelihood estimation) epochs
+PRE_EPOCH_NUM = 5 #25 for haikus  # 120  supervise (maximum likelihood estimation) epochs
 SEED = 88
 BATCH_SIZE = 64
 
@@ -32,12 +32,13 @@ dis_batch_size = 64
 #########################################################################################
 #  Basic Training Parameters
 #########################################################################################
-TOTAL_BATCH =  200 # 200
-log_file =  "haiku/haiku_log.txt"            # 'save/experiment-log.txt' 
-positive_file =  'haiku/haiku_to_int.train.txt'     # 'save/real_data.txt' 'haiku/haiku.train.txt'
-negative_file = 'haiku/generator_sample.txt' # 'save/generator_sample.txt'
-eval_file =  'haiku/eval_file.txt'         # 'save/eval_file.txt'
-generated_num = 10000
+TOTAL_BATCH =  5 # 100 for haikus # 200
+log_file =  "obama/obama_log.txt"            # 'save/experiment-log.txt' "haiku/haiku_log.txt"
+positive_file =  'obama/obama_to_int.train.txt'     # 'save/real_data.txt' 'haiku/haiku_to_int.train.txt'
+negative_file = 'obama/generator_sample.txt' # 'save/generator_sample.txt' 'haiku/generator_sample.txt
+valid_file = "obama/obama_to_int.valid.txt" # "haiku/haiku_to_int.valid.txt"
+eval_file =  'obama/eval_file.txt'         # 'save/eval_file.txt' 'haiku/eval_file.txt'
+generated_num = 10000 
 
 
 def generate_samples(sess, trainable_model, batch_size, generated_num, output_file):
@@ -60,7 +61,6 @@ def target_loss(sess, target_lstm, data_loader):
 
     for it in range(data_loader.num_batch):
         batch = data_loader.next_batch()
-        print(target_lstm.pretrain_loss)
         g_loss = sess.run(target_lstm.pretrain_loss, {target_lstm.x: batch})
         nll.append(g_loss)
 
@@ -83,12 +83,13 @@ def pre_train_epoch(sess, trainable_model, data_loader):
 def main():
     random.seed(SEED)
     np.random.seed(SEED)
+    tf.set_random_seed(SEED)
     assert START_TOKEN == 0
 
-    gen_data_loader = Gen_Data_loader(BATCH_SIZE)
-    likelihood_data_loader = Gen_Data_loader(BATCH_SIZE) # For testing
-    vocab_size =  5427 #5000
-    dis_data_loader = Dis_dataloader(BATCH_SIZE)
+    gen_data_loader = Gen_Data_loader(BATCH_SIZE,SEQ_LENGTH)
+    likelihood_data_loader = Gen_Data_loader(BATCH_SIZE, SEQ_LENGTH) # For testing
+    vocab_size =  12389 #5000
+    dis_data_loader = Dis_dataloader(BATCH_SIZE, SEQ_LENGTH)
 
 
     generator = Generator(vocab_size, BATCH_SIZE, EMB_DIM, HIDDEN_DIM, SEQ_LENGTH, START_TOKEN)
@@ -96,7 +97,7 @@ def main():
     target_params = pickle.load(file_obj, encoding='latin1')
     #target_lstm = TARGET_LSTM(vocab_size, BATCH_SIZE, EMB_DIM, HIDDEN_DIM, SEQ_LENGTH, START_TOKEN, target_params) # The oracle model
 
-    discriminator = Discriminator(sequence_length=20, num_classes=2, vocab_size=vocab_size, embedding_size=dis_embedding_dim, 
+    discriminator = Discriminator(sequence_length=SEQ_LENGTH, num_classes=2, vocab_size=vocab_size, embedding_size=dis_embedding_dim, 
                                 filter_sizes=dis_filter_sizes, num_filters=dis_num_filters, l2_reg_lambda=dis_l2_reg_lambda)
 
     config = tf.ConfigProto()
@@ -120,16 +121,18 @@ def main():
         if epoch % 5 == 0:
             generate_samples(sess, generator, BATCH_SIZE, generated_num, eval_file)
             #likelihood_data_loader.create_batches(eval_file)
+            likelihood_data_loader.create_batches(valid_file)
             #test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
-            #print('pre-train epoch ', epoch, 'test_loss ', test_loss)
-            print("pre-train epoch: ", epoch, loss)
+            test_loss = target_loss(sess, generator, likelihood_data_loader)
+            print('pre-train epoch ', epoch, 'test_loss ', test_loss)
+            #print("pre-train epoch: ", epoch, loss)
             #buffer = 'epoch:\t'+ str(epoch) + '\tnll:\t' + str(test_loss) + '\n'
             buffer = 'epoch:\t'+ str(epoch) + '\tloss:\t' + str(loss) + '\n'
             #log.write(buffer)
 
     print('Start pre-training discriminator...')
     # Train 3 epoch on the generated data and do this for 50 times
-    for _ in range(50):
+    for _ in range(5):
         generate_samples(sess, generator, BATCH_SIZE, generated_num, negative_file)
         dis_data_loader.load_train_data(positive_file, negative_file)
         for _ in range(3):
@@ -153,7 +156,6 @@ def main():
         for it in range(1):
             samples = generator.generate(sess)
             rewards = rollout.get_reward(sess, samples, 16, discriminator)
-            print(rewards)
             feed = {generator.x: samples, generator.rewards: rewards}
             _ = sess.run(generator.g_updates, feed_dict=feed)
 
@@ -162,9 +164,11 @@ def main():
             generate_samples(sess, generator, BATCH_SIZE, generated_num, eval_file)
             #likelihood_data_loader.create_batches(eval_file)
             #test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
+            likelihood_data_loader.create_batches(valid_file)
+            test_loss = target_loss(sess, generator, likelihood_data_loader)         
             #buffer = 'epoch:\t' + str(total_batch) + '\tnll:\t' + str(test_loss) + '\n'
             #print('total_batch: ', total_batch, 'test_loss: ', test_loss)
-            print("total_batch:", total_batch)
+            print("total_batch: ", total_batch, "test_loss: ", test_loss)
             log.write(buffer)
 
         # Update roll-out parameters
