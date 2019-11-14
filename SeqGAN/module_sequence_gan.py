@@ -119,7 +119,7 @@ def pre_train_epoch(sess, trainable_model, data_loader):
     return np.mean(supervised_g_losses)
 
 
-def pre_train_generator(sess, saver, generator, gen_data_loader, likelihood_data_loader, files, log, num_epochs):
+def pre_train_generator(sess, saver, MODEL_STRING, generator, gen_data_loader, likelihood_data_loader, files, log, num_epochs):
     print('Start pre-training...')
     log.write('pre-training...\n')
     for epoch in range(num_epochs):
@@ -156,7 +156,7 @@ def train_discriminator(sess, generator, discriminator, dis_data_loader, files, 
                 }
                 _ = sess.run(discriminator.train_op, feed)
 
-def train_adversarial(sess, saver, generator, discriminator, rollout, dis_data_loader, likelihood_data_loader, files, log, n):
+def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollout, dis_data_loader, likelihood_data_loader, files, log, n):
     print('#########################################################################')
     print('Start Adversarial Training...')
     log.write('adversarial training...\n')
