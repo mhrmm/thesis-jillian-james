@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import random
+import time
 from dataloader import Gen_Data_loader, Dis_dataloader
 from generator import Generator
 from discriminator import Discriminator
@@ -73,7 +74,9 @@ def assign_parser_args(args):
         seq_length = 40
         vocab_size = 13405
         files = obama_files
-    return files, vocab_size, seq_length, args.gen_n, args.disc_n, args.adv_n
+    model_string = args.app +"/models/"+str(args.gen_n)+ "_" + str(args.disc_n) + "_" + str(args.adv_n)
+    model_string += time.strftime("_on_%m/%d/%y", time.gmtime())
+    return files, vocab_size, seq_length, args.gen_n, args.disc_n, args.adv_n, model_string
 
 #   Modularized Training
 
@@ -116,18 +119,27 @@ def pre_train_epoch(sess, trainable_model, data_loader):
     return np.mean(supervised_g_losses)
 
 
-def pre_train_generator(sess, generator, gen_data_loader, likelihood_data_loader, files, log, num_epochs):
+def pre_train_generator(sess, saver, generator, gen_data_loader, likelihood_data_loader, files, log, num_epochs):
     print('Start pre-training...')
     log.write('pre-training...\n')
     for epoch in range(num_epochs):
         loss = pre_train_epoch(sess, generator, gen_data_loader)
+        if epoch == 0:
+            generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
+            likelihood_data_loader.create_batches(files["valid_file"])
+            small_loss = target_loss(sess, generator, likelihood_data_loader)
+            saver.save(sess, MODEL_STRING)
         if epoch % 5 == 0:
             generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
             likelihood_data_loader.create_batches(files["valid_file"])
             test_loss = target_loss(sess, generator, likelihood_data_loader)
+            if test_loss < small_loss:
+                small_loss = test_loss
+                saver.save(sess, MODEL_STRING)
             print('pre-train epoch ', epoch, 'test_loss ', test_loss)
             buffer = 'epoch:\t'+ str(epoch) + '\tloss:\t' + str(loss) + '\n'
             log.write(buffer)
+    return small_loss
 
 def train_discriminator(sess, generator, discriminator, dis_data_loader, files, log, n):
     for _ in range(n):
@@ -144,10 +156,11 @@ def train_discriminator(sess, generator, discriminator, dis_data_loader, files, 
                 }
                 _ = sess.run(discriminator.train_op, feed)
 
-def train_adversarial(sess, generator, discriminator, rollout, dis_data_loader, likelihood_data_loader, files, log, n):
+def train_adversarial(sess, saver, generator, discriminator, rollout, dis_data_loader, likelihood_data_loader, files, log, n):
     print('#########################################################################')
     print('Start Adversarial Training...')
     log.write('adversarial training...\n')
+    saver.restore(sess, tf.train.latest_checkpoint('./'+MODEL_STRING))
     for total_batch in range(n):
         # Train the generator for one step
         samples = generator.generate(sess)
@@ -156,13 +169,21 @@ def train_adversarial(sess, generator, discriminator, rollout, dis_data_loader, 
         _ = sess.run(generator.g_updates, feed_dict=feed)
 
         # Test
-        if total_batch % 5 == 0 or total_batch == n - 1:
+        if total_batch == 0:
             generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
             likelihood_data_loader.create_batches(files["valid_file"])
-            test_loss = target_loss(sess, generator, likelihood_data_loader) 
-            print("total_batch: ", total_batch, "test_loss: ", test_loss)
-            buffer = "total_batch: " + str(total_batch) + "test_loss: " + str(test_loss)
-            log.write(buffer)
+            small_loss = target_loss(sess, generator, likelihood_data_loader)
+        else:
+            if total_batch % 5 == 0 or total_batch == n - 1:
+                generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
+                likelihood_data_loader.create_batches(files["valid_file"])
+                test_loss = target_loss(sess, generator, likelihood_data_loader)
+                if test_loss < small_loss:
+                    small_loss = test_loss
+                    saver.save(sess, MODEL_STRING)
+                print("total_batch: ", total_batch, "test_loss: ", test_loss)
+                buffer = "total_batch: " + str(total_batch) + "test_loss: " + str(test_loss)
+                log.write(buffer)
 
         # Update roll-out parameters
         rollout.update_params()
@@ -174,7 +195,8 @@ def train_adversarial(sess, generator, discriminator, rollout, dis_data_loader, 
 def main():
     #Get user input
     parser = create_parser()
-    files, vocab_size, seq_length, gen_n, disc_n, adv_n = assign_parser_args(parser.parse_args())
+    files, vocab_size, seq_length, gen_n, disc_n, adv_n, MODEL_STRING = assign_parser_args(parser.parse_args())
+   
 
     # Initialize the random seed
     random.seed(SEED)
@@ -197,6 +219,7 @@ def main():
     # Set session configurations. 
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
+    saver = tf.train.Saver()
     sess = tf.Session(config=config)
     sess.run(tf.global_variables_initializer())
 
@@ -208,7 +231,7 @@ def main():
     log = open(files['log_file'], 'w')
 
     # Pre_train the generator with MLE. 
-    pre_train_generator(sess, generator, gen_data_loader, likelihood_data_loader, files, log, gen_n)
+    pre_train_generator(sess, saver, MODEL_STRING, generator, gen_data_loader, likelihood_data_loader, files, log, gen_n)
     print('Start pre-training discriminator...')
 
     # Do the discriminator pre-training steps
@@ -216,7 +239,11 @@ def main():
     
     # Do the adversarial training steps
     rollout = ROLLOUT(generator, 0.8)
-    train_adversarial(sess, generator, discriminator, rollout, dis_data_loader, likelihood_data_loader, files, log, adv_n)
+    train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollout, dis_data_loader, likelihood_data_loader, files, log, adv_n)
+
+    #Use the best model to generate final sample
+    saver.restore(sess, tf.train.latest_checkpoint('./'+MODEL_STRING))
+    generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
 
     log.close()
 
