@@ -9,6 +9,7 @@ from rollout import ROLLOUT
 from target_lstm import TARGET_LSTM
 import pickle
 import argparse
+import sys
 
 #########################################################################################
 #  Generator  Hyper-parameters
@@ -54,29 +55,39 @@ haiku_files["eval_file"] =  'haiku/eval_file.txt'
 #  Create a parser to parse user input
 def create_parser():
     parser = argparse.ArgumentParser(description='Program for running several SeqGan applications.')
-    parser.add_argument('app', metavar='application', type=str, default = 'obama',
+    parser.add_argument('app', metavar='application', type=str, choices=['obama', 'haiku'],
                     help='Enter either \'obama\' or \'haiku\'')
-    parser.add_argument('gen_n', type = int, default = 120,
+    parser.add_argument('gen_n', type = int,
                     help='Number of generator pre-training steps')
-    parser.add_argument('disc_n', type = int, default = 50,
+    parser.add_argument('disc_n', type = int,
                     help='Number of discriminator pre-training steps')
-    parser.add_argument('adv_n', type = int, default = 200,
+    parser.add_argument('adv_n', type = int,
                     help='Number of adversarial pre-training steps')
+    parser.add_argument('-l', metavar="seq_len", type = int, default = -1,
+                    help = 'Length of the token sequences used for training.')
+    parser.add_argument('-v', metavar="vocab_size", type = int, default = -1,
+                    help = "The size of the vocab from the input files (outout by datautil.py)")
+
     return parser
 
 def assign_parser_args(args):
     # Need to add functionality to allow user-specified N to be used in training
     if args.app == 'haiku':
-        seq_length = 70
-        vocab_size = 60
+        if args.l == -1:
+            args.l = 70
+        if args.vocab_size == -1:
+            args.v = 60
         files = haiku_files
     else:
-        seq_length = 40
-        vocab_size = 13405
+        if args.l == -1:
+            args.l = 40
+        if args.v == -1:
+            args.v = 13405
         files = obama_files
+
     model_string = args.app +"/models/"+str(args.gen_n)+ "_" + str(args.disc_n) + "_" + str(args.adv_n)
-    model_string += time.strftime("_on_%m/%d/%y", time.gmtime())
-    return files, vocab_size, seq_length, args.gen_n, args.disc_n, args.adv_n, model_string
+    model_string += time.strftime("_on_%m/%d/%y", time.gmtime()) + ".ckpt"
+    return files, args.v, args.l, args.gen_n, args.disc_n, args.adv_n, model_string
 
 #   Modularized Training
 
@@ -160,7 +171,7 @@ def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollo
     print('#########################################################################')
     print('Start Adversarial Training...')
     log.write('adversarial training...\n')
-    saver.restore(sess, tf.train.latest_checkpoint('./'+MODEL_STRING))
+    saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
     for total_batch in range(n):
         # Train the generator for one step
         samples = generator.generate(sess)
@@ -242,7 +253,7 @@ def main():
     train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollout, dis_data_loader, likelihood_data_loader, files, log, adv_n)
 
     #Use the best model to generate final sample
-    saver.restore(sess, tf.train.latest_checkpoint('./'+MODEL_STRING))
+    saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
     generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
 
     log.close()
