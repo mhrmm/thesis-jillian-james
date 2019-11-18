@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 import random
 import time
+import os
 from dataloader import Gen_Data_loader, Dis_dataloader
 from generator import Generator
 from discriminator import Discriminator
@@ -9,7 +10,6 @@ from rollout import ROLLOUT
 from target_lstm import TARGET_LSTM
 import pickle
 import argparse
-import sys
 
 #########################################################################################
 #  Generator  Hyper-parameters
@@ -67,6 +67,8 @@ def create_parser():
                     help = 'Length of the token sequences used for training.')
     parser.add_argument('-v', metavar="vocab_size", type = int, default = -1,
                     help = "The size of the vocab from the input files (outout by datautil.py)")
+    parser.add_argument('-mn', metavar="model_name", type = str, default = "",
+                    help = "Name for the checkpoint files. Will be stored at ./<app>/models/<model_name>")
 
     return parser
 
@@ -82,11 +84,19 @@ def assign_parser_args(args):
         if args.l == -1:
             args.l = 40
         if args.v == -1:
-            args.v = 13405
+            args.v = 13439
         files = obama_files
+    
+    model_string = args.app +"/models/"
+    if args.ms == "":
+        model_string += str(args.gen_n)+ "_" + str(args.disc_n) + "_" + str(args.adv_n)
+        model_string += time.strftime("_on_%m_%d_%y", time.gmtime())
+    else:
+        model_string += args.ms
+    
+    if not print(os.path.exists("./"+model_string)):
+        os.mkdir("./"+model_string)
 
-    model_string = args.app +"/models/"+str(args.gen_n)+ "_" + str(args.disc_n) + "_" + str(args.adv_n)
-    model_string += time.strftime("_on_%m/%d/%y", time.gmtime()) + ".ckpt"
     return files, args.v, args.l, args.gen_n, args.disc_n, args.adv_n, model_string
 
 #   Modularized Training
@@ -152,7 +162,8 @@ def pre_train_generator(sess, saver, MODEL_STRING, generator, gen_data_loader, l
             log.write(buffer)
     return small_loss
 
-def train_discriminator(sess, generator, discriminator, dis_data_loader, files, log, n):
+def train_discriminator(sess, saver, MODEL_STRING, generator, discriminator, dis_data_loader, files, log, n):
+    saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
     for _ in range(n):
         generate_samples(sess, generator, BATCH_SIZE, generated_num, files["negative_file"])
         dis_data_loader.load_train_data(files["positive_file"], files["negative_file"])
@@ -166,6 +177,7 @@ def train_discriminator(sess, generator, discriminator, dis_data_loader, files, 
                     discriminator.dropout_keep_prob: dis_dropout_keep_prob
                 }
                 _ = sess.run(discriminator.train_op, feed)
+    saver.save(sess, MODEL_STRING)
 
 def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollout, dis_data_loader, likelihood_data_loader, files, log, n):
     print('#########################################################################')
@@ -246,7 +258,7 @@ def main():
     print('Start pre-training discriminator...')
 
     # Do the discriminator pre-training steps
-    train_discriminator(sess, generator, discriminator, dis_data_loader, files, log, disc_n)
+    train_discriminator(sess, saver, MODEL_STRING, generator, discriminator, dis_data_loader, files, log, disc_n)
     
     # Do the adversarial training steps
     rollout = ROLLOUT(generator, 0.8)
