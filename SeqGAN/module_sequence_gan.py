@@ -234,6 +234,8 @@ def main():
     tf.set_random_seed(SEED)
     assert START_TOKEN == 0
 
+    tf.logging.set_verbosity(tf.logging.ERROR)
+
     # Initialize the data loaders
     gen_data_loader = Gen_Data_loader(BATCH_SIZE, seq_length)
     likelihood_data_loader = Gen_Data_loader(BATCH_SIZE, seq_length) # For testing
