@@ -153,7 +153,7 @@ def pre_train_generator(sess, saver, MODEL_STRING, generator, gen_data_loader, l
             generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
             likelihood_data_loader.create_batches(files["valid_file"])
             small_loss = target_loss(sess, generator, likelihood_data_loader)
-            saver.save(sess, MODEL_STRING+/"model")
+            saver.save(sess, MODEL_STRING+"/model")
         if epoch % 5 == 0:
             generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
             likelihood_data_loader.create_batches(files["valid_file"])
@@ -161,6 +161,7 @@ def pre_train_generator(sess, saver, MODEL_STRING, generator, gen_data_loader, l
             if test_loss < small_loss:
                 small_loss = test_loss
                 saver.save(sess, MODEL_STRING+"/model")
+                print("Saving checkpoint ...")
             print('pre-train epoch ', epoch, 'test_loss ', test_loss)
             buffer = 'epoch:\t'+ str(epoch) + '\tloss:\t' + str(loss) + '\n'
             log.write(buffer)
@@ -182,6 +183,7 @@ def train_discriminator(sess, saver, MODEL_STRING, generator, discriminator, dis
                 }
                 _ = sess.run(discriminator.train_op, feed)
     saver.save(sess, MODEL_STRING+ "/model")
+    print("Saving checkpoint ...")
 
 def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollout, dis_data_loader, likelihood_data_loader, files, log, n):
     print('#########################################################################')
@@ -208,6 +210,7 @@ def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollo
                 if test_loss < small_loss:
                     small_loss = test_loss
                     saver.save(sess, MODEL_STRING +"/model")
+                    print("Saving checkpoint ...")
                 print("total_batch: ", total_batch, "test_loss: ", test_loss)
                 buffer = "total_batch: " + str(total_batch) + "test_loss: " + str(test_loss)
                 log.write(buffer)
@@ -249,6 +252,8 @@ def main():
     saver = tf.train.Saver()
     sess = tf.Session(config=config)
     sess.run(tf.global_variables_initializer())
+    # If restoring from a previous run ....
+    saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
 
 
     # Create batches from the positive file.
