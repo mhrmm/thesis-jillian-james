@@ -86,15 +86,19 @@ def assign_parser_args(args):
         if args.v == -1:
             args.v = 13439
         files = obama_files
-    
+
+    #Make the /models directory if its not there.
     model_string = args.app +"/models/"
-    if args.ms == "":
+    if not os.path.exists("./"+model_string):
+        os.mkdir("./"+model_string)
+
+    #make the checkpoint directory if its not there.
+    if args.mn == "":
         model_string += str(args.gen_n)+ "_" + str(args.disc_n) + "_" + str(args.adv_n)
         model_string += time.strftime("_on_%m_%d_%y", time.gmtime())
     else:
-        model_string += args.ms
-    
-    if not print(os.path.exists("./"+model_string)):
+        model_string += args.mn
+    if not os.path.exists("./"+model_string):
         os.mkdir("./"+model_string)
 
     return files, args.v, args.l, args.gen_n, args.disc_n, args.adv_n, model_string
