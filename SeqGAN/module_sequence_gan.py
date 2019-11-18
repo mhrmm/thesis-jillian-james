@@ -167,8 +167,7 @@ def pre_train_generator(sess, saver, MODEL_STRING, generator, gen_data_loader, l
             log.write(buffer)
     return small_loss
 
-def train_discriminator(sess, saver, MODEL_STRING, generator, discriminator, dis_data_loader, files, log, n):
-    saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
+def train_discriminator(sess, generator, discriminator, dis_data_loader, files, log, n):
     for _ in range(n):
         generate_samples(sess, generator, BATCH_SIZE, generated_num, files["negative_file"])
         dis_data_loader.load_train_data(files["positive_file"], files["negative_file"])
@@ -182,8 +181,6 @@ def train_discriminator(sess, saver, MODEL_STRING, generator, discriminator, dis
                     discriminator.dropout_keep_prob: dis_dropout_keep_prob
                 }
                 _ = sess.run(discriminator.train_op, feed)
-    saver.save(sess, MODEL_STRING+ "/model")
-    print("Saving checkpoint ...")
 
 def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollout, dis_data_loader, likelihood_data_loader, files, log, n):
     print('#########################################################################')
@@ -219,7 +216,7 @@ def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollo
         rollout.update_params()
 
         # Train the discriminator for 5 steps
-        train_discriminator(sess, saver, MODEL_STRING, generator, discriminator, dis_data_loader, files, log, 5)
+        train_discriminator(sess, generator, discriminator, dis_data_loader, files, log, 5)
 
 
 def main():
@@ -271,7 +268,10 @@ def main():
     print('Start pre-training discriminator...')
 
     # Do the discriminator pre-training steps
-    train_discriminator(sess, saver, MODEL_STRING, generator, discriminator, dis_data_loader, files, log, disc_n)
+    saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
+    train_discriminator(sess, generator, discriminator, dis_data_loader, files, log, disc_n)
+    print("Saving checkpoint ...")
+    saver.save(sess, MODEL_STRING+ "/model")
     
     # Do the adversarial training steps
     rollout = ROLLOUT(generator, 0.8)
