@@ -252,8 +252,10 @@ def main():
     saver = tf.train.Saver()
     sess = tf.Session(config=config)
     sess.run(tf.global_variables_initializer())
+
     # If restoring from a previous run ....
-    saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
+    if len(os.listdir("./"+MODEL_STRING)) > 0:
+        saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
 
 
     # Create batches from the positive file.
