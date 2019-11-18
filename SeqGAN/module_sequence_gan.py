@@ -153,14 +153,14 @@ def pre_train_generator(sess, saver, MODEL_STRING, generator, gen_data_loader, l
             generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
             likelihood_data_loader.create_batches(files["valid_file"])
             small_loss = target_loss(sess, generator, likelihood_data_loader)
-            saver.save(sess, MODEL_STRING)
+            saver.save(sess, MODEL_STRING+/"model")
         if epoch % 5 == 0:
             generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
             likelihood_data_loader.create_batches(files["valid_file"])
             test_loss = target_loss(sess, generator, likelihood_data_loader)
             if test_loss < small_loss:
                 small_loss = test_loss
-                saver.save(sess, MODEL_STRING)
+                saver.save(sess, MODEL_STRING+"/model")
             print('pre-train epoch ', epoch, 'test_loss ', test_loss)
             buffer = 'epoch:\t'+ str(epoch) + '\tloss:\t' + str(loss) + '\n'
             log.write(buffer)
@@ -181,7 +181,7 @@ def train_discriminator(sess, saver, MODEL_STRING, generator, discriminator, dis
                     discriminator.dropout_keep_prob: dis_dropout_keep_prob
                 }
                 _ = sess.run(discriminator.train_op, feed)
-    saver.save(sess, MODEL_STRING)
+    saver.save(sess, MODEL_STRING+ "/model")
 
 def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollout, dis_data_loader, likelihood_data_loader, files, log, n):
     print('#########################################################################')
@@ -207,7 +207,7 @@ def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollo
                 test_loss = target_loss(sess, generator, likelihood_data_loader)
                 if test_loss < small_loss:
                     small_loss = test_loss
-                    saver.save(sess, MODEL_STRING)
+                    saver.save(sess, MODEL_STRING +"/model")
                 print("total_batch: ", total_batch, "test_loss: ", test_loss)
                 buffer = "total_batch: " + str(total_batch) + "test_loss: " + str(test_loss)
                 log.write(buffer)
@@ -216,7 +216,7 @@ def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollo
         rollout.update_params()
 
         # Train the discriminator for 5 steps
-        train_discriminator(sess, generator, discriminator, dis_data_loader, files, log, 5)
+        train_discriminator(sess, saver, MODEL_STRING, generator, discriminator, dis_data_loader, files, log, 5)
 
 
 def main():
