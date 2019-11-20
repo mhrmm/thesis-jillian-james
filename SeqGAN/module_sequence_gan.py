@@ -162,6 +162,8 @@ def pre_train_generator(sess, saver, MODEL_STRING, generator, gen_data_loader, l
                 small_loss = test_loss
                 saver.save(sess, MODEL_STRING+"/model")
                 print("Saving checkpoint ...")
+            else:
+                saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
             print('pre-train epoch ', epoch, 'test_loss ', test_loss)
             buffer = 'epoch:\t'+ str(epoch) + '\tloss:\t' + str(loss) + '\n'
             log.write(buffer)
@@ -208,6 +210,8 @@ def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollo
                     small_loss = test_loss
                     saver.save(sess, MODEL_STRING +"/model")
                     print("Saving checkpoint ...")
+                else:
+                    saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
                 print("total_batch: ", total_batch, "test_loss: ", test_loss)
                 buffer = "total_batch: " + str(total_batch) + "test_loss: " + str(test_loss)
                 log.write(buffer)
