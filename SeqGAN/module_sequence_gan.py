@@ -117,7 +117,7 @@ def generate_samples(sess, trainable_model, batch_size, generated_num, output_fi
             fout.write(buffer)
 
 
-def target_loss(sess, target_lstm, data_loader):
+def target_loss(sess, target_lstm, data_loader, pre_train = False):
     # target_loss means the oracle negative log-likelihood tested with the oracle model "target_lstm"
     # For more details, please see the Section 4 in https://arxiv.org/abs/1609.05473
     nll = []
@@ -125,10 +125,15 @@ def target_loss(sess, target_lstm, data_loader):
 
     for it in range(data_loader.num_batch):
         batch = data_loader.next_batch()
-        g_loss = sess.run(target_lstm.pretrain_loss, {target_lstm.x: batch})
+        if pre_train:
+            g_loss = sess.run(target_lstm.pretrain_loss, {target_lstm.x: batch})
+        else:
+            g_loss = sess.run(target_lstm.g_loss, {target_lstm.x: batch})
         nll.append(g_loss)
 
     return np.mean(nll)
+
+
 
 
 def pre_train_epoch(sess, trainable_model, data_loader):
@@ -152,12 +157,12 @@ def pre_train_generator(sess, saver, MODEL_STRING, generator, gen_data_loader, l
         if epoch == 0:
             generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
             likelihood_data_loader.create_batches(files["valid_file"])
-            small_loss = target_loss(sess, generator, likelihood_data_loader)
+            small_loss = target_loss(sess, generator, likelihood_data_loader, pre_train=True)
             saver.save(sess, MODEL_STRING+"/model")
         if epoch % 5 == 0:
             generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
             likelihood_data_loader.create_batches(files["valid_file"])
-            test_loss = target_loss(sess, generator, likelihood_data_loader)
+            test_loss = target_loss(sess, generator, likelihood_data_loader, pre_train=True)
             if test_loss < small_loss:
                 small_loss = test_loss
                 saver.save(sess, MODEL_STRING+"/model")
