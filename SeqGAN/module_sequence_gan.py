@@ -230,9 +230,9 @@ def main():
    
 
     # Initialize the random seed
-    random.seed(SEED)
-    np.random.seed(SEED)
-    tf.set_random_seed(SEED)
+    #random.seed(SEED)
+    #np.random.seed(SEED)
+    #tf.set_random_seed(SEED)
     assert START_TOKEN == 0
 
     tf.logging.set_verbosity(tf.logging.ERROR)
