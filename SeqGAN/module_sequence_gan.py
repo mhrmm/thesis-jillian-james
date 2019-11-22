@@ -1,6 +1,8 @@
 import numpy as np
 import tensorflow as tf
 import random
+import time
+import os
 from dataloader import Gen_Data_loader, Dis_dataloader
 from generator import Generator
 from discriminator import Discriminator
@@ -53,27 +55,53 @@ haiku_files["eval_file"] =  'haiku/eval_file.txt'
 #  Create a parser to parse user input
 def create_parser():
     parser = argparse.ArgumentParser(description='Program for running several SeqGan applications.')
-    parser.add_argument('app', metavar='application', type=str, default = 'obama',
+    parser.add_argument('app', metavar='application', type=str, choices=['obama', 'haiku'],
                     help='Enter either \'obama\' or \'haiku\'')
-    parser.add_argument('gen_n', type = int, default = 120,
+    parser.add_argument('gen_n', type = int,
                     help='Number of generator pre-training steps')
-    parser.add_argument('disc_n', type = int, default = 50,
+    parser.add_argument('disc_n', type = int,
                     help='Number of discriminator pre-training steps')
-    parser.add_argument('adv_n', type = int, default = 200,
+    parser.add_argument('adv_n', type = int,
                     help='Number of adversarial pre-training steps')
+    parser.add_argument('-l', metavar="seq_len", type = int, default = -1,
+                    help = 'Length of the token sequences used for training.')
+    parser.add_argument('-v', metavar="vocab_size", type = int, default = -1,
+                    help = "The size of the vocab from the input files (outout by datautil.py)")
+    parser.add_argument('-mn', metavar="model_name", type = str, default = "",
+                    help = "Name for the checkpoint files. Will be stored at ./<app>/models/<model_name>")
+
     return parser
 
 def assign_parser_args(args):
     # Need to add functionality to allow user-specified N to be used in training
     if args.app == 'haiku':
-        seq_length = 70
-        vocab_size = 60
+        if args.l == -1:
+            args.l = 70
+        if args.vocab_size == -1:
+            args.v = 60
         files = haiku_files
     else:
-        seq_length = 40
-        vocab_size = 13405
+        if args.l == -1:
+            args.l = 40
+        if args.v == -1:
+            args.v = 13439
         files = obama_files
-    return files, vocab_size, seq_length, args.gen_n, args.disc_n, args.adv_n
+
+    #Make the /models directory if its not there.
+    model_string = args.app +"/models/"
+    if not os.path.exists("./"+model_string):
+        os.mkdir("./"+model_string)
+
+    #make the checkpoint directory if its not there.
+    if args.mn == "":
+        model_string += str(args.gen_n)+ "_" + str(args.disc_n) + "_" + str(args.adv_n)
+        model_string += time.strftime("_on_%m_%d_%y", time.gmtime())
+    else:
+        model_string += args.mn
+    if not os.path.exists("./"+model_string):
+        os.mkdir("./"+model_string)
+
+    return files, args.v, args.l, args.gen_n, args.disc_n, args.adv_n, model_string
 
 #   Modularized Training
 
@@ -116,18 +144,30 @@ def pre_train_epoch(sess, trainable_model, data_loader):
     return np.mean(supervised_g_losses)
 
 
-def pre_train_generator(sess, generator, gen_data_loader, likelihood_data_loader, files, log, num_epochs):
+def pre_train_generator(sess, saver, MODEL_STRING, generator, gen_data_loader, likelihood_data_loader, files, log, num_epochs):
     print('Start pre-training...')
     log.write('pre-training...\n')
     for epoch in range(num_epochs):
         loss = pre_train_epoch(sess, generator, gen_data_loader)
+        if epoch == 0:
+            generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
+            likelihood_data_loader.create_batches(files["valid_file"])
+            small_loss = target_loss(sess, generator, likelihood_data_loader)
+            saver.save(sess, MODEL_STRING+"/model")
         if epoch % 5 == 0:
             generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
             likelihood_data_loader.create_batches(files["valid_file"])
             test_loss = target_loss(sess, generator, likelihood_data_loader)
+            if test_loss < small_loss:
+                small_loss = test_loss
+                saver.save(sess, MODEL_STRING+"/model")
+                print("Saving checkpoint ...")
+            else:
+                saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
             print('pre-train epoch ', epoch, 'test_loss ', test_loss)
             buffer = 'epoch:\t'+ str(epoch) + '\tloss:\t' + str(loss) + '\n'
             log.write(buffer)
+    return small_loss
 
 def train_discriminator(sess, generator, discriminator, dis_data_loader, files, log, n):
     for _ in range(n):
@@ -144,10 +184,11 @@ def train_discriminator(sess, generator, discriminator, dis_data_loader, files, 
                 }
                 _ = sess.run(discriminator.train_op, feed)
 
-def train_adversarial(sess, generator, discriminator, rollout, dis_data_loader, likelihood_data_loader, files, log, n):
+def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollout, dis_data_loader, likelihood_data_loader, files, log, n):
     print('#########################################################################')
     print('Start Adversarial Training...')
     log.write('adversarial training...\n')
+    saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
     for total_batch in range(n):
         # Train the generator for one step
         samples = generator.generate(sess)
@@ -156,13 +197,24 @@ def train_adversarial(sess, generator, discriminator, rollout, dis_data_loader, 
         _ = sess.run(generator.g_updates, feed_dict=feed)
 
         # Test
-        if total_batch % 5 == 0 or total_batch == n - 1:
+        if total_batch == 0:
             generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
             likelihood_data_loader.create_batches(files["valid_file"])
-            test_loss = target_loss(sess, generator, likelihood_data_loader) 
-            print("total_batch: ", total_batch, "test_loss: ", test_loss)
-            buffer = "total_batch: " + str(total_batch) + "test_loss: " + str(test_loss)
-            log.write(buffer)
+            small_loss = target_loss(sess, generator, likelihood_data_loader)
+        else:
+            if total_batch % 5 == 0 or total_batch == n - 1:
+                generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
+                likelihood_data_loader.create_batches(files["valid_file"])
+                test_loss = target_loss(sess, generator, likelihood_data_loader)
+                if test_loss < small_loss:
+                    small_loss = test_loss
+                    saver.save(sess, MODEL_STRING +"/model")
+                    print("Saving checkpoint ...")
+                else:
+                    saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
+                print("total_batch: ", total_batch, "test_loss: ", test_loss)
+                buffer = "total_batch: " + str(total_batch) + "test_loss: " + str(test_loss)
+                log.write(buffer)
 
         # Update roll-out parameters
         rollout.update_params()
@@ -174,13 +226,16 @@ def train_adversarial(sess, generator, discriminator, rollout, dis_data_loader, 
 def main():
     #Get user input
     parser = create_parser()
-    files, vocab_size, seq_length, gen_n, disc_n, adv_n = assign_parser_args(parser.parse_args())
+    files, vocab_size, seq_length, gen_n, disc_n, adv_n, MODEL_STRING = assign_parser_args(parser.parse_args())
+   
 
     # Initialize the random seed
-    random.seed(SEED)
-    np.random.seed(SEED)
-    tf.set_random_seed(SEED)
+    #random.seed(SEED)
+    #np.random.seed(SEED)
+    #tf.set_random_seed(SEED)
     assert START_TOKEN == 0
+
+    tf.logging.set_verbosity(tf.logging.ERROR)
 
     # Initialize the data loaders
     gen_data_loader = Gen_Data_loader(BATCH_SIZE, seq_length)
@@ -197,8 +252,13 @@ def main():
     # Set session configurations. 
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
+    saver = tf.train.Saver()
     sess = tf.Session(config=config)
     sess.run(tf.global_variables_initializer())
+
+    # If restoring from a previous run ....
+    if len(os.listdir("./"+MODEL_STRING)) > 0:
+        saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
 
 
     # Create batches from the positive file.
@@ -208,15 +268,22 @@ def main():
     log = open(files['log_file'], 'w')
 
     # Pre_train the generator with MLE. 
-    pre_train_generator(sess, generator, gen_data_loader, likelihood_data_loader, files, log, gen_n)
+    pre_train_generator(sess, saver, MODEL_STRING, generator, gen_data_loader, likelihood_data_loader, files, log, gen_n)
     print('Start pre-training discriminator...')
 
     # Do the discriminator pre-training steps
+    saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
     train_discriminator(sess, generator, discriminator, dis_data_loader, files, log, disc_n)
+    print("Saving checkpoint ...")
+    saver.save(sess, MODEL_STRING+ "/model")
     
     # Do the adversarial training steps
     rollout = ROLLOUT(generator, 0.8)
-    train_adversarial(sess, generator, discriminator, rollout, dis_data_loader, likelihood_data_loader, files, log, adv_n)
+    train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollout, dis_data_loader, likelihood_data_loader, files, log, adv_n)
+
+    #Use the best model to generate final sample
+    saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
+    generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
 
     log.close()
 
