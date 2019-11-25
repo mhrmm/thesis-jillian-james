@@ -1,5 +1,7 @@
 import tensorflow as tf
 from tensorflow.python.ops import tensor_array_ops, control_flow_ops
+import datautil
+
 
 class Generator(object):
     def __init__(self, num_emb, batch_size, emb_dim, hidden_dim,
@@ -206,3 +208,20 @@ class Generator(object):
 
     def g_optimizer(self, *args, **kwargs):
         return tf.train.AdamOptimizer(*args, **kwargs)
+
+
+
+def inspect_samples(sess, trainable_model, batch_size, generated_nums, int_to_word):    
+    def generate_samples(sess, trainable_model, generated_num):
+        generated_samples = []
+        while len(generated_samples) < generated_num:
+            generated_samples.extend(trainable_model.generate(sess))
+        return generated_samples[:generated_num]
+
+
+    for poem in generate_samples(sess, trainable_model, 
+                                 generated_nums):
+        generated = datautil.int_to_text_ls(poem, int_to_word)
+        generated = datautil.remove_filler(generated)
+        print(' '.join(generated))
+    

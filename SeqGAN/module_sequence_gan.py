@@ -4,12 +4,13 @@ import random
 import time
 import os
 from dataloader import Gen_Data_loader, Dis_dataloader
-from generator import Generator
+from generator import Generator, inspect_samples
 from discriminator import Discriminator
 from rollout import ROLLOUT
 from target_lstm import TARGET_LSTM
 import pickle
 import argparse
+import json
 
 #########################################################################################
 #  Generator  Hyper-parameters
@@ -38,6 +39,15 @@ generated_num = 10000
 #########################################################################################
 #  Grouping Files for Parser
 #########################################################################################
+synth_files = {}
+synth_files["log_file"] =  "synth/text_log.txt"
+synth_files["positive_file"] =  'synth/text_to_int.train.txt'
+synth_files["negative_file"] = 'synth/generator_sample.txt'
+synth_files["valid_file"] = "synth/text_to_int.valid.txt"
+synth_files["eval_file"] =  'synth/eval_file.txt'
+synth_files["int2word"] =  "synth/int_to_word.json"
+
+
 obama_files = {}
 obama_files["log_file"] =  "obama/obama_log.txt"
 obama_files["positive_file"] =  'obama/obama_to_int.train.txt'
@@ -55,7 +65,7 @@ haiku_files["eval_file"] =  'haiku/eval_file.txt'
 #  Create a parser to parse user input
 def create_parser():
     parser = argparse.ArgumentParser(description='Program for running several SeqGan applications.')
-    parser.add_argument('app', metavar='application', type=str, choices=['obama', 'haiku'],
+    parser.add_argument('app', metavar='application', type=str, choices=['obama', 'haiku', 'synth'],
                     help='Enter either \'obama\' or \'haiku\'')
     parser.add_argument('gen_n', type = int,
                     help='Number of generator pre-training steps')
@@ -80,12 +90,19 @@ def assign_parser_args(args):
         if args.vocab_size == -1:
             args.v = 60
         files = haiku_files
-    else:
+    elif args.app == 'obama':
         if args.l == -1:
             args.l = 40
         if args.v == -1:
             args.v = 13439
         files = obama_files
+    else:
+        if args.l == -1:
+            args.l = 40
+        if args.v == -1:
+            args.v = 209
+        files = synth_files
+        
 
     #Make the /models directory if its not there.
     model_string = args.app +"/models/"
@@ -154,7 +171,11 @@ def pre_train_generator(sess, saver, MODEL_STRING, generator, gen_data_loader, l
             likelihood_data_loader.create_batches(files["valid_file"])
             small_loss = target_loss(sess, generator, likelihood_data_loader)
             saver.save(sess, MODEL_STRING+"/model")
-        if epoch % 5 == 0:
+        if epoch % 1 == 0:
+            with open(files['int2word']) as json_file:
+                int_to_word = json.load(json_file)
+                int_to_word = {int(k): int_to_word[k] for k in int_to_word}
+            inspect_samples(sess, generator, BATCH_SIZE, 3, int_to_word)
             generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
             likelihood_data_loader.create_batches(files["valid_file"])
             test_loss = target_loss(sess, generator, likelihood_data_loader)
@@ -162,9 +183,9 @@ def pre_train_generator(sess, saver, MODEL_STRING, generator, gen_data_loader, l
                 small_loss = test_loss
                 saver.save(sess, MODEL_STRING+"/model")
                 print("Saving checkpoint ...")
-            else:
-                saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
-            print('pre-train epoch ', epoch, 'test_loss ', test_loss)
+            #else:
+            #    saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
+            print('pre-train epoch {}: train_loss = {}; test_loss = {}'.format(epoch, loss, test_loss))
             buffer = 'epoch:\t'+ str(epoch) + '\tloss:\t' + str(loss) + '\n'
             log.write(buffer)
     return small_loss
@@ -189,38 +210,38 @@ def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollo
     print('Start Adversarial Training...')
     log.write('adversarial training...\n')
     saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
+    small_loss = float('inf')
     for total_batch in range(n):
         # Train the generator for one step
         samples = generator.generate(sess)
         rewards = rollout.get_reward(sess, samples, 16, discriminator) #I might actually need to change the value 16 here.
         feed = {generator.x: samples, generator.rewards: rewards}
         _ = sess.run(generator.g_updates, feed_dict=feed)
-
+        
         # Test
-        if total_batch == 0:
+        if total_batch % 1 == 0 or total_batch == n - 1:
+            with open(files['int2word']) as json_file:
+                int_to_word = json.load(json_file)
+                int_to_word = {int(k): int_to_word[k] for k in int_to_word}
+            inspect_samples(sess, generator, BATCH_SIZE, 3, int_to_word)
             generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
             likelihood_data_loader.create_batches(files["valid_file"])
-            small_loss = target_loss(sess, generator, likelihood_data_loader)
-        else:
-            if total_batch % 5 == 0 or total_batch == n - 1:
-                generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
-                likelihood_data_loader.create_batches(files["valid_file"])
-                test_loss = target_loss(sess, generator, likelihood_data_loader)
-                if test_loss < small_loss:
-                    small_loss = test_loss
-                    saver.save(sess, MODEL_STRING +"/model")
-                    print("Saving checkpoint ...")
-                else:
-                    saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
-                print("total_batch: ", total_batch, "test_loss: ", test_loss)
-                buffer = "total_batch: " + str(total_batch) + "test_loss: " + str(test_loss)
-                log.write(buffer)
+            test_loss = target_loss(sess, generator, likelihood_data_loader)
+            if test_loss < small_loss:
+                small_loss = test_loss
+                saver.save(sess, MODEL_STRING +"/model")
+                print("Saving checkpoint ...")
+            else:
+                saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
+            print("total_batch: ", total_batch, "test_loss: ", test_loss)
+            buffer = "total_batch: " + str(total_batch) + "test_loss: " + str(test_loss)
+            log.write(buffer)
 
         # Update roll-out parameters
         rollout.update_params()
 
-        # Train the discriminator for 5 steps
-        train_discriminator(sess, generator, discriminator, dis_data_loader, files, log, 5)
+        # Train the discriminator for 1 steps
+        train_discriminator(sess, generator, discriminator, dis_data_loader, files, log, 1)
 
 
 def main():
@@ -267,19 +288,23 @@ def main():
     # Open log file for writing
     log = open(files['log_file'], 'w')
 
+   
+
     # Pre_train the generator with MLE. 
     pre_train_generator(sess, saver, MODEL_STRING, generator, gen_data_loader, likelihood_data_loader, files, log, gen_n)
     print('Start pre-training discriminator...')
 
     # Do the discriminator pre-training steps
-    saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
+    #saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
     train_discriminator(sess, generator, discriminator, dis_data_loader, files, log, disc_n)
     print("Saving checkpoint ...")
     saver.save(sess, MODEL_STRING+ "/model")
     
     # Do the adversarial training steps
     rollout = ROLLOUT(generator, 0.8)
-    train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollout, dis_data_loader, likelihood_data_loader, files, log, adv_n)
+    train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, 
+                      rollout, dis_data_loader, likelihood_data_loader, 
+                      files, log, adv_n)
 
     #Use the best model to generate final sample
     saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))

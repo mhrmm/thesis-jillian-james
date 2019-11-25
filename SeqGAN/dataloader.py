@@ -30,6 +30,7 @@ class Gen_Data_loader():
         self.pointer = 0
 
 
+
 class Dis_dataloader():
     def __init__(self, batch_size, seq_length):
         self.batch_size = batch_size
@@ -47,13 +48,14 @@ class Dis_dataloader():
                 line = line.split()
                 parse_line = [int(x) for x in line]
                 positive_examples.append(parse_line)
-        with open(negative_file)as fin:
+        with open(negative_file) as fin:
             for line in fin:
                 line = line.strip()
                 line = line.split()
                 parse_line = [int(x) for x in line]
                 if len(parse_line) == self.seq_length: #Keep as 20 for haiku and other
                     negative_examples.append(parse_line)
+     
         self.sentences = np.array(positive_examples + negative_examples)
 
         # Generate labels

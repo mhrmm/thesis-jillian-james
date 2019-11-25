@@ -58,6 +58,28 @@ def obama_to_ls(f):
                 n+= 1
     return full
 
+def synth_to_ls(f):
+    '''
+    Makes list of Obama speach paragraphs from Obama file.
+    '''
+    full = []
+    paragraph = []
+    n = 0
+    for line in f:
+        if line != "\n":
+            line = line.strip()
+            line = re.findall(r"[\w']+|[.,!?();-]", line.lower())
+            num_stopwords = 40 - len(line)
+            if line != []:
+                if len(line) < 40:
+                    paragraph = line + ["_FILL_"]*num_stopwords
+                    full.append(paragraph)
+                else:
+                    paragraph = line[:40]
+                    full.append(paragraph)
+                n+= 1
+    return full
+
 
 
 def create_dicts(lines_ls):
@@ -80,10 +102,14 @@ def create_dicts(lines_ls):
 
     return word_to_int, int_to_word, len(all_tokens)
 
-def remove_filler(generated):
+def remove_filler_old(generated):
     for j in range(len(generated)):
         generated[j] = [value for value in generated[j] if value != " _FILL_ "]
     return generated
+
+def remove_filler(generated):
+    return [value for value in generated if value != "_FILL_"]
+
 
 def text_ls_to_int_ls(text_ls, word_to_int):
     '''
@@ -98,6 +124,14 @@ def text_ls_to_int_ls(text_ls, word_to_int):
             new_text.append(word_to_int[word])
         new_full.append(new_text)
     return new_full
+
+def int_to_text_ls(line, int_to_word):
+    '''
+    Reads file in dataloader form and converts to text
+    using dictionary mappings
+    '''
+    parse_line = [int_to_word[x] for x in line]
+    return parse_line
 
 
 
@@ -146,8 +180,12 @@ def main():
         whole = haiku_to_ls(open("haiku/input.txt", 'r'))
         train_ls, remainder = train_test_split(whole, test_size = 0.4, shuffle = False)
         valid_ls, test_ls = train_test_split(remainder, test_size = 0.5, shuffle = False)
+    elif args.app == 'synth':
+        whole = synth_to_ls(open('synth/input.txt', 'r'))
+        train_ls, remainder = train_test_split(whole, test_size = 0.4, shuffle = False)
+        valid_ls, test_ls = train_test_split(remainder, test_size = 0.5, shuffle = False)
     else:
-        print("Application must be haiku or obama")
+        print("Application must be haiku or obama or synth")
         sys.exit(0)
 
     # Create dictionaries to map integers to tokens and vice versa
@@ -171,12 +209,18 @@ def main():
         write_lists_to_file("obama/obama_to_int.train.txt", train_as_int_ls)
         write_lists_to_file("obama/obama_to_int.valid.txt", valid_as_int_ls)
         write_lists_to_file("obama/obama_to_int.test.txt", test_as_int_ls)
-    else:
+    elif args.app == 'haiku':
         write_dict_to_file("haiku/word_to_int.json", word_to_int)
         write_dict_to_file("haiku/int_to_word.json", int_to_word)
         write_lists_to_file("haiku/haiku_to_int.train.txt", train_as_int_ls)
         write_lists_to_file("haiku/haiku_to_int.valid.txt", valid_as_int_ls)
         write_lists_to_file("haiku/haiku_to_int.test.txt", test_as_int_ls)
+    elif args.app == 'synth':
+        write_dict_to_file("synth/word_to_int.json", word_to_int)
+        write_dict_to_file("synth/int_to_word.json", int_to_word)
+        write_lists_to_file("synth/text_to_int.train.txt", train_as_int_ls)
+        write_lists_to_file("synth/text_to_int.valid.txt", valid_as_int_ls)
+        write_lists_to_file("synth/text_to_int.test.txt", test_as_int_ls)
 
 if __name__ == '__main__':
     main()
