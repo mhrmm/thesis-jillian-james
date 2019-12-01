@@ -66,7 +66,7 @@ haiku_files["eval_file"] =  'haiku/eval_file.txt'
 def create_parser():
     parser = argparse.ArgumentParser(description='Program for running several SeqGan applications.')
     parser.add_argument('app', metavar='application', type=str, choices=['obama', 'haiku', 'synth'],
-                    help='Enter either \'obama\' or \'haiku\'')
+                    help='Enter either \'obama\' or \'haiku\' or \'synth\'')
     parser.add_argument('gen_n', type = int,
                     help='Number of generator pre-training steps')
     parser.add_argument('disc_n', type = int,
@@ -191,7 +191,7 @@ def pre_train_generator(sess, saver, MODEL_STRING, generator, gen_data_loader, l
     return small_loss
 
 def train_discriminator(sess, generator, discriminator, dis_data_loader, files, log, n):
-    for _ in range(n):
+    for i in range(n):
         generate_samples(sess, generator, BATCH_SIZE, generated_num, files["negative_file"])
         dis_data_loader.load_train_data(files["positive_file"], files["negative_file"])
         for _ in range(3):
@@ -203,13 +203,14 @@ def train_discriminator(sess, generator, discriminator, dis_data_loader, files, 
                     discriminator.input_y: y_batch,
                     discriminator.dropout_keep_prob: dis_dropout_keep_prob
                 }
-                _ = sess.run(discriminator.train_op, feed)
+                loss = sess.run(discriminator.train_op, feed)
+                print('train discriminator epoch {}: train_loss = {}'.format(i, n))
 
 def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollout, dis_data_loader, likelihood_data_loader, files, log, n):
     print('#########################################################################')
     print('Start Adversarial Training...')
     log.write('adversarial training...\n')
-    saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
+    # saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
     small_loss = float('inf')
     for total_batch in range(n):
         # Train the generator for one step
@@ -231,8 +232,8 @@ def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollo
                 small_loss = test_loss
                 saver.save(sess, MODEL_STRING +"/model")
                 print("Saving checkpoint ...")
-            else:
-                saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
+            # else:
+            #     saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
             print("total_batch: ", total_batch, "test_loss: ", test_loss)
             buffer = "total_batch: " + str(total_batch) + "test_loss: " + str(test_loss)
             log.write(buffer)
