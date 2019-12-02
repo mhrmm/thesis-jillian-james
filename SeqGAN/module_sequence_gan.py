@@ -210,11 +210,11 @@ def train_discriminator(sess, generator, discriminator, dis_data_loader, dis_tes
                 losses.append(loss)
 
                 x_batch, y_batch = dis_test_data_loader.next_batch()
-                feed = {self.input_x: x_inputs, self.dropout_keep_prob: 1.0}
-                test_loss = sess.run(discriminator.loss, feed)
-                #predicts = discriminator.score_predicts(x_batch)
+                # feed = {self.input_x: x_inputs, self.dropout_keep_prob: 1.0}
+                # test_loss = sess.run(discriminator.loss, feed)
+                predicts_score= discriminator.score_predicts(sess, x_batch, y_batch)
                 #test_loss.append(tf.contrib.metrics.f1_score(y_batch, predicts))
-                test_losses.append(test_loss)
+                test_losses.append(predict_score)
 
         print('train discriminator epoch {}: train_loss = {}, test_loss{}:'.format(i, np.mean(losses), np.mean(test_losses)))
 
