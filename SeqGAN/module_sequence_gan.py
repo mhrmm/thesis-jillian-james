@@ -190,11 +190,13 @@ def pre_train_generator(sess, saver, MODEL_STRING, generator, gen_data_loader, l
             log.write(buffer)
     return small_loss
 
-def train_discriminator(sess, generator, discriminator, dis_data_loader, files, log, n):
+def train_discriminator(sess, generator, discriminator, dis_data_loader, dis_test_data_loader, files, log, n):
     for i in range(n):
         generate_samples(sess, generator, BATCH_SIZE, generated_num, files["negative_file"])
         dis_data_loader.load_train_data(files["positive_file"], files["negative_file"])
+        dis_test_data_loader.load_train_data(files["valid_file", files["negative_file"]])
         losses = []
+        test_f1s = []
         for _ in range(3):
             dis_data_loader.reset_pointer()
             for it in range(dis_data_loader.num_batch):
@@ -206,12 +208,16 @@ def train_discriminator(sess, generator, discriminator, dis_data_loader, files, 
                 }
                 loss = sess.run(discriminator.train_op, feed)
                 losses.append(loss)
-        feed = {discriminator.input_x: samples, discriminator.dropout_keep_prob: 1.0}
-        predicts = sess.run(discriminator.ypred_for_auc, feed)
-        print('train discriminator epoch {}: train_loss = {}'.format(i, np.mean(losses)))
+
+                x_batch, y_batch = dis_test_data_loader.next_batch()
+                feed_pred = {discriminator.input_x: x_batch, discriminator.dropout_keep_prob: 1.0}
+                predicts = sess.run(discriminator.ypred_for_auc, feed)
+                test_f1s.append(tf.contrib.metrics.f1_score(y_batch, predicts))
+
+        print('train discriminator epoch {}: train_loss = {}, test_f1{}:'.format(i, np.mean(losses), np.mean(test_f1s)))
         print("y_batch {}:".format(predicts))
 
-def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollout, dis_data_loader, likelihood_data_loader, files, log, n):
+def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollout, dis_data_loader, dis_test_data_loader, likelihood_data_loader, files, log, n):
     print('#########################################################################')
     print('Start Adversarial Training...')
     log.write('adversarial training...\n')
@@ -247,7 +253,7 @@ def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollo
         rollout.update_params()
 
         # Train the discriminator for 1 steps
-        train_discriminator(sess, generator, discriminator, dis_data_loader, files, log, 1)
+        train_discriminator(sess, generator, discriminator, dis_data_loader, dis_test_data_loader, files, log, 1)
 
 
 def main():
@@ -268,6 +274,7 @@ def main():
     gen_data_loader = Gen_Data_loader(BATCH_SIZE, seq_length)
     likelihood_data_loader = Gen_Data_loader(BATCH_SIZE, seq_length) # For testing
     dis_data_loader = Dis_dataloader(BATCH_SIZE, seq_length)
+    dis_test_data_loader = Dis_dataloader(BATCH_SIZE, seq_length) # For testing
 
     # Initialize the Generator
     generator = Generator(vocab_size, BATCH_SIZE, EMB_DIM, HIDDEN_DIM, seq_length, START_TOKEN)
@@ -302,14 +309,14 @@ def main():
 
     # Do the discriminator pre-training steps
     #saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
-    train_discriminator(sess, generator, discriminator, dis_data_loader, files, log, disc_n)
+    train_discriminator(sess, generator, discriminator, dis_data_loader, dis_test_data_loader, files, log, disc_n)
     print("Saving checkpoint ...")
     saver.save(sess, MODEL_STRING+ "/model")
     
     # Do the adversarial training steps
     rollout = ROLLOUT(generator, 0.8)
     train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, 
-                      rollout, dis_data_loader, likelihood_data_loader, 
+                      rollout, dis_data_loader, dis_test_data_loader, likelihood_data_loader, 
                       files, log, adv_n)
 
     #Use the best model to generate final sample
