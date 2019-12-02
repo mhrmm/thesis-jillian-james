@@ -206,7 +206,10 @@ def train_discriminator(sess, generator, discriminator, dis_data_loader, files, 
                 }
                 loss = sess.run(discriminator.train_op, feed)
                 losses.append(loss)
+        feed = {discriminator.input_x: samples, discriminator.dropout_keep_prob: 1.0}
+        predicts = sess.run(discriminator.ypred_for_auc, feed)
         print('train discriminator epoch {}: train_loss = {}'.format(i, np.mean(losses)))
+        print("y_batch {}:".format(predicts))
 
 def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollout, dis_data_loader, likelihood_data_loader, files, log, n):
     print('#########################################################################')
