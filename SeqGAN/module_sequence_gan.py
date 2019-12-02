@@ -196,7 +196,7 @@ def train_discriminator(sess, generator, discriminator, dis_data_loader, dis_tes
         dis_data_loader.load_train_data(files["positive_file"], files["negative_file"])
         dis_test_data_loader.load_train_data(files["valid_file"], files["negative_file"])
         losses = []
-        test_f1s = []
+        test_losses = []
         for _ in range(3):
             dis_data_loader.reset_pointer()
             for it in range(dis_data_loader.num_batch):
@@ -210,10 +210,13 @@ def train_discriminator(sess, generator, discriminator, dis_data_loader, dis_tes
                 losses.append(loss)
 
                 x_batch, y_batch = dis_test_data_loader.next_batch()
-                predicts = discriminator.test_predict(x_batch)
-                test_f1s.append(tf.contrib.metrics.f1_score(y_batch, predicts))
+                feed = {self.input_x: x_inputs, self.dropout_keep_prob: 1.0}
+                test_loss = sess.run(discriminator.loss, feed)
+                #predicts = discriminator.score_predicts(x_batch)
+                #test_loss.append(tf.contrib.metrics.f1_score(y_batch, predicts))
+                test_losses.append(test_loss)
 
-        print('train discriminator epoch {}: train_loss = {}, test_f1{}:'.format(i, np.mean(losses), np.mean(test_f1s)))
+        print('train discriminator epoch {}: train_loss = {}, test_loss{}:'.format(i, np.mean(losses), np.mean(test_losses)))
 
 def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollout, dis_data_loader, dis_test_data_loader, likelihood_data_loader, files, log, n):
     print('#########################################################################')

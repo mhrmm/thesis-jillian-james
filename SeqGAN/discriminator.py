@@ -141,7 +141,7 @@ class Discriminator(object):
         self.train_op = train_one_step(d_optimizer, grads_and_vars)
 
     def test_predict(self, x_inputs):
-        feed = {discriminator.input_x: x_inputs, discriminator.dropout_keep_prob: 1.0}
-        ypred_for_auc = sess.run(discriminator.ypred_for_auc, feed)
+        feed = {self.input_x: x_inputs, self.dropout_keep_prob: 1.0}
+        ypred_for_auc = sess.run(self.ypred_for_auc, feed)
         ypred = np.array([item[1] for item in ypred_for_auc])
         return y_pred
