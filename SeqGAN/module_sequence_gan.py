@@ -207,17 +207,13 @@ def train_discriminator(sess, generator, discriminator, dis_data_loader, dis_tes
                     discriminator.dropout_keep_prob: dis_dropout_keep_prob
                 }
                 loss = sess.run(discriminator.train_op, feed)
-                print(loss)
                 losses.append(loss)
 
-                # x_batch, y_batch = dis_test_data_loader.next_batch()
-                # feed_pred = {discriminator.input_x: x_batch, discriminator.dropout_keep_prob: 1.0}
-                # predicts = sess.run(discriminator.ypred_for_auc, feed)
-                # test_f1s.append(tf.contrib.metrics.f1_score(y_batch, predicts))
-                test_f1s.append(1)
+                x_batch, y_batch = dis_test_data_loader.next_batch()
+                predicts = discriminator.test_predict(x_batch)
+                test_f1s.append(tf.contrib.metrics.f1_score(y_batch, predicts))
 
         print('train discriminator epoch {}: train_loss = {}, test_f1{}:'.format(i, np.mean(losses), np.mean(test_f1s)))
-        print("y_batch {}:".format(predicts))
 
 def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollout, dis_data_loader, dis_test_data_loader, likelihood_data_loader, files, log, n):
     print('#########################################################################')

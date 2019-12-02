@@ -132,10 +132,16 @@ class Discriminator(object):
         def train_one_step(optimizer, grads_and_vars):
             optimizer.apply_gradients(grads_and_vars)
             return self.loss
+        
 
         self.params = [param for param in tf.trainable_variables() if 'discriminator' in param.name]
         d_optimizer = tf.train.AdamOptimizer(1e-4)
         grads_and_vars = d_optimizer.compute_gradients(self.loss, self.params, aggregation_method=2)
-        self.train_op = d_optimizer.apply_gradients(grads_and_vars)
-        #self.train_op = train_one_step(d_optimizer, grads_and_vars)
+        #self.train_op = d_optimizer.apply_gradients(grads_and_vars)
+        self.train_op = train_one_step(d_optimizer, grads_and_vars)
 
+    def test_predict(self, x_inputs):
+        feed = {discriminator.input_x: x_inputs, discriminator.dropout_keep_prob: 1.0}
+        ypred_for_auc = sess.run(discriminator.ypred_for_auc, feed)
+        ypred = np.array([item[1] for item in ypred_for_auc])
+        return y_pred
