@@ -140,9 +140,13 @@ class Discriminator(object):
         #self.train_op = d_optimizer.apply_gradients(grads_and_vars)
         self.train_op = train_one_step(d_optimizer, grads_and_vars)
 
-    def test_predict(self, sess, x_inputs, y_inputs):
+    def score_predicts(self, sess, x_inputs, y_inputs):
         feed = {self.input_x: x_inputs, self.dropout_keep_prob: 1.0}
-        ypred_for_auc = sess.run(self.ypred_for_auc, feed)
-        ypred = np.array([item[1] for item in ypred_for_auc])
-        scored = tf.contrib.metrics.f1_score(y_inputs, ypred)
-        return y_pred
+        ypred = sess.run(self.predictions, feed)
+        yactual = np.array([item[1] for item in y_inputs])
+        #print(ypred)
+        #print(y_inputs)
+        #print(ypred.shape)
+        #print(y_inputs.shape)
+        scored = tf.contrib.metrics.f1_score(yactual, ypred)
+        return scored

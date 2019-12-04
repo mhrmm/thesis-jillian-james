@@ -214,7 +214,7 @@ def train_discriminator(sess, generator, discriminator, dis_data_loader, dis_tes
                 # test_loss = sess.run(discriminator.loss, feed)
                 predicts_score= discriminator.score_predicts(sess, x_batch, y_batch)
                 #test_loss.append(tf.contrib.metrics.f1_score(y_batch, predicts))
-                test_losses.append(predict_score)
+                test_losses.append(predicts_score)
 
         print('train discriminator epoch {}: train_loss = {}, test_loss{}:'.format(i, np.mean(losses), np.mean(test_losses)))
 
