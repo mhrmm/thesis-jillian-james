@@ -228,7 +228,7 @@ def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollo
         samples = generator.generate(sess)
         rewards = rollout.get_reward(sess, samples, 16, discriminator) #I might actually need to change the value 16 here.
         feed = {generator.x: samples, generator.rewards: rewards}
-        _ = sess.run(generator.g_updates, feed_dict=feed)
+        loss = sess.run(generator.g_updates, feed_dict=feed)
         
         # Test
         if total_batch % 1 == 0 or total_batch == n - 1:
@@ -245,7 +245,7 @@ def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollo
                 print("Saving checkpoint ...")
             # else:
             #     saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
-            print("total_batch: ", total_batch, "test_loss: ", test_loss)
+            print("Adversarial Training total_batch: {}, train_loss: {}, test_loss: {}".format(total_batch, loss, test_loss))
             buffer = "total_batch: " + str(total_batch) + "test_loss: " + str(test_loss)
             log.write(buffer)
 
