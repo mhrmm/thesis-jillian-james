@@ -3,6 +3,8 @@ import tensorflow as tf
 import random
 import time
 import os
+import datautil
+import nltk
 from dataloader import Gen_Data_loader, Dis_dataloader
 from generator import Generator, inspect_samples
 from discriminator import Discriminator
@@ -47,13 +49,13 @@ synth_files["valid_file"] = "synth/text_to_int.valid.txt"
 synth_files["eval_file"] =  'synth/eval_file.txt'
 synth_files["int2word"] =  "synth/int_to_word.json"
 
-
 obama_files = {}
 obama_files["log_file"] =  "obama/obama_log.txt"
 obama_files["positive_file"] =  'obama/obama_to_int.train.txt'
 obama_files["negative_file"] = 'obama/generator_sample.txt'
 obama_files["valid_file"] = "obama/obama_to_int.valid.txt"
 obama_files["eval_file"] =  'obama/eval_file.txt'
+obama_files["int2word"] =  "obama/int_to_word.json"
 
 haiku_files = {}
 haiku_files["log_file"] =  "haiku/haiku_log.txt"
@@ -61,6 +63,7 @@ haiku_files["positive_file"] = 'haiku/haiku_to_int.train.txt'
 haiku_files["negative_file"] = 'haiku/generator_sample.txt'
 haiku_files["valid_file"] = "haiku/haiku_to_int.valid.txt"
 haiku_files["eval_file"] =  'haiku/eval_file.txt'
+haiku_files["int2word"] =  "haiku/int_to_word.json"
 
 #  Create a parser to parse user input
 def create_parser():
@@ -208,13 +211,10 @@ def train_discriminator(sess, generator, discriminator, dis_data_loader, dis_tes
                 }
                 loss = sess.run(discriminator.train_op, feed)
                 losses.append(loss)
-
-                x_batch, y_batch = dis_test_data_loader.next_batch()
-                # feed = {self.input_x: x_inputs, self.dropout_keep_prob: 1.0}
-                # test_loss = sess.run(discriminator.loss, feed)
-                predicts_score= discriminator.score_predicts(sess, x_batch, y_batch)
-                #test_loss.append(tf.contrib.metrics.f1_score(y_batch, predicts))
-                test_losses.append(predicts_score)
+            # for it in range(dis_test_data_loader.num_batch):
+            #     x_batch, y_batch = dis_test_data_loader.next_batch()
+            #     predicts_score= discriminator.score_predicts(sess, x_batch, y_batch)
+            #     test_losses.append(predicts_score)
 
         print('train discriminator epoch {}: train_loss = {}, test_loss{}:'.format(i, np.mean(losses), np.mean(test_losses)))
 
@@ -222,7 +222,6 @@ def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollo
     print('#########################################################################')
     print('Start Adversarial Training...')
     log.write('adversarial training...\n')
-    # saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
     small_loss = float('inf')
     for total_batch in range(n):
         # Train the generator for one step
@@ -309,10 +308,7 @@ def main():
     print('Start pre-training discriminator...')
 
     # Do the discriminator pre-training steps
-    #saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
     train_discriminator(sess, generator, discriminator, dis_data_loader, dis_test_data_loader, files, log, disc_n)
-    print("Saving checkpoint ...")
-    saver.save(sess, MODEL_STRING+ "/model")
     
     # Do the adversarial training steps
     rollout = ROLLOUT(generator, 0.8)
@@ -320,9 +316,27 @@ def main():
                       rollout, dis_data_loader, dis_test_data_loader, likelihood_data_loader, 
                       files, log, adv_n)
 
+
+
     #Use the best model to generate final sample
     saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
     generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
+
+    # If we are doing synthetic test calculate the BLEUscore
+    if files = synth_files:
+        int_to_word = json.load(open(synth_files["int2word"], 'r'))
+        generated = datautil.int_file_to_text_ls(open(synth_files["eval_file"], 'r'), int_to_word)
+        references = datautil.int_file_to_text_ls(open("synth/text_to_int.test.txt", 'r'), int_to_word)
+
+        blue = BLEUscore = nltk.translate.bleu_score.corpus_bleu([references]*len(generated), generated)
+
+        if not os.path.exists("./synth/results.txt"):
+            os.mknod("./synth/results.txt")
+        
+        with open("./synth/results.txt", 'a') as f:
+            out_string = "synth run {} {} {}: BLEUscore = {}".format(gen_n, disc_n, adv_n, blue)
+            f.write(out.string)
+            f.close()
 
     log.close()
 
