@@ -228,7 +228,7 @@ def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollo
         samples = generator.generate(sess)
         rewards = rollout.get_reward(sess, samples, 16, discriminator) #I might actually need to change the value 16 here.
         feed = {generator.x: samples, generator.rewards: rewards}
-        loss = sess.run(generator.g_updates, feed_dict=feed)
+        _ = sess.run(generator.g_updates, feed_dict=feed)
         
         # Test
         if total_batch % 1 == 0 or total_batch == n - 1:
@@ -237,6 +237,8 @@ def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollo
                 int_to_word = {int(k): int_to_word[k] for k in int_to_word}
             inspect_samples(sess, generator, BATCH_SIZE, 3, int_to_word)
             generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
+            likelihood_data_loader.create_batches(files["positive_file"])
+            loss = target_loss(sess, generator, likelihood_data_loader)
             likelihood_data_loader.create_batches(files["valid_file"])
             test_loss = target_loss(sess, generator, likelihood_data_loader)
             if test_loss < small_loss:
