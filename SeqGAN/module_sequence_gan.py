@@ -216,7 +216,7 @@ def train_discriminator(sess, generator, discriminator, dis_data_loader, dis_tes
             #     predicts_score= discriminator.score_predicts(sess, x_batch, y_batch)
             #     test_losses.append(predicts_score)
 
-        print('train discriminator epoch {}: train_loss = {}, test_loss{}:'.format(i, np.mean(losses), np.mean(test_losses)))
+        print('train discriminator epoch {}: train_loss = {}, test_loss = {}'.format(i, np.mean(losses), np.mean(test_losses)))
 
 def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollout, dis_data_loader, dis_test_data_loader, likelihood_data_loader, files, log, n):
     print('#########################################################################')
@@ -323,19 +323,19 @@ def main():
     generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
 
     # If we are doing synthetic test calculate the BLEUscore
-    if files = synth_files:
+    if files == synth_files:
         int_to_word = json.load(open(synth_files["int2word"], 'r'))
         generated = datautil.int_file_to_text_ls(open(synth_files["eval_file"], 'r'), int_to_word)
         references = datautil.int_file_to_text_ls(open("synth/text_to_int.test.txt", 'r'), int_to_word)
 
-        blue = BLEUscore = nltk.translate.bleu_score.corpus_bleu([references]*len(generated), generated)
+        blue = nltk.translate.bleu_score.corpus_bleu([references]*len(generated), generated)
 
         if not os.path.exists("./synth/results.txt"):
             os.mknod("./synth/results.txt")
         
         with open("./synth/results.txt", 'a') as f:
-            out_string = "synth run {} {} {}: BLEUscore = {}".format(gen_n, disc_n, adv_n, blue)
-            f.write(out.string)
+            out = "synth run {} {} {}: BLEUscore = {}\n".format(gen_n, disc_n, adv_n, blue)
+            f.write(out)
             f.close()
 
     log.close()
