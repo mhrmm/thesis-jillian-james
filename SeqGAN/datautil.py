@@ -102,13 +102,12 @@ def create_dicts(lines_ls):
 
     return word_to_int, int_to_word, len(all_tokens)
 
-def remove_filler_old(generated):
-    for j in range(len(generated)):
-        generated[j] = [value for value in generated[j] if value != " _FILL_ "]
-    return generated
-
 def remove_filler(generated):
-    return [value for value in generated if value != "_FILL_"]
+    new = []
+    for j in range(len(generated)):
+        new.append([value for value in generated[j] if value != "_FILL_"])
+    return new
+
 
 
 def text_ls_to_int_ls(text_ls, word_to_int):
