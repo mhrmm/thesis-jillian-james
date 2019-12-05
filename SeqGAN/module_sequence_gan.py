@@ -14,6 +14,9 @@ import pickle
 import argparse
 import json
 
+# For me for running on Mark's machine
+os.environ["CUDA_VISIBLE_DEVICES"]="1,2" 
+
 #########################################################################################
 #  Generator  Hyper-parameters
 ######################################################################################
@@ -291,7 +294,6 @@ def main():
     # Set session configurations. 
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
-    os.environ["CUDA_VISIBLE_DEVICES"]="1,2" 
     saver = tf.train.Saver()
     sess = tf.Session(config=config)
     sess.run(tf.global_variables_initializer())
@@ -323,8 +325,6 @@ def main():
                     rollout, dis_data_loader, dis_test_data_loader, likelihood_data_loader, 
                     files, log, adv_n)
 
-
-
     #Use the best model to generate final sample
     saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
     generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
@@ -334,12 +334,14 @@ def main():
     generated = datautil.int_file_to_text_ls(open(files["eval_file"], 'r'), int_to_word)
     references = datautil.int_file_to_text_ls(open(files["test_file"], 'r'), int_to_word)
 
+    generated = datautil.remove_filler(generated)
+    references = datautil.remove_filler(references)
+
     blue = nltk.translate.bleu_score.corpus_bleu([references]*len(generated), generated)
     print("Run with args {} {} {}: BLEUscore = {}\n".format(gen_n, disc_n, adv_n, blue))
     
 
     if files == synth_files:
-        generated = datautil.int_file_to_text_ls(open(synth_files["eval_file"], 'r'), int_to_word)
         
         total_correct = 0
         for sentence in generated:
