@@ -281,17 +281,17 @@ def main():
     dis_data_loader = Dis_dataloader(BATCH_SIZE, seq_length)
     dis_test_data_loader = Dis_dataloader(BATCH_SIZE, seq_length) # For testing
 
-    with tf.device('/device:GPU:2'):
-        # Initialize the Generator
-        generator = Generator(vocab_size, BATCH_SIZE, EMB_DIM, HIDDEN_DIM, seq_length, START_TOKEN)
+    # Initialize the Generator
+    generator = Generator(vocab_size, BATCH_SIZE, EMB_DIM, HIDDEN_DIM, seq_length, START_TOKEN)
 
-        # Initialize the Discriminator
-        discriminator = Discriminator(sequence_length=seq_length, num_classes=2, vocab_size=vocab_size, embedding_size=dis_embedding_dim, 
-                                    filter_sizes=dis_filter_sizes, num_filters=dis_num_filters, l2_reg_lambda=dis_l2_reg_lambda)
+    # Initialize the Discriminator
+    discriminator = Discriminator(sequence_length=seq_length, num_classes=2, vocab_size=vocab_size, embedding_size=dis_embedding_dim, 
+                                filter_sizes=dis_filter_sizes, num_filters=dis_num_filters, l2_reg_lambda=dis_l2_reg_lambda)
 
     # Set session configurations. 
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
+    os.environ["CUDA_VISIBLE_DEVICES"]="1,2" 
     saver = tf.train.Saver()
     sess = tf.Session(config=config)
     sess.run(tf.global_variables_initializer())
@@ -318,7 +318,7 @@ def main():
     
     # Do the adversarial training steps
     rollout = ROLLOUT(generator, 0.8)
-    
+
     train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, 
                     rollout, dis_data_loader, dis_test_data_loader, likelihood_data_loader, 
                     files, log, adv_n)
