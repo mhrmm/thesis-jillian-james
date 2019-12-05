@@ -262,26 +262,26 @@ def train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, rollo
 
 
 def main():
+    #Get user input
+    parser = create_parser()
+    files, vocab_size, seq_length, gen_n, disc_n, adv_n, MODEL_STRING = assign_parser_args(parser.parse_args())
+
+
+    # Initialize the random seed
+    #random.seed(SEED)
+    #np.random.seed(SEED)
+    #tf.set_random_seed(SEED)
+    assert START_TOKEN == 0
+
+    tf.logging.set_verbosity(tf.logging.ERROR)
+
+    # Initialize the data loaders
+    gen_data_loader = Gen_Data_loader(BATCH_SIZE, seq_length)
+    likelihood_data_loader = Gen_Data_loader(BATCH_SIZE, seq_length) # For testing
+    dis_data_loader = Dis_dataloader(BATCH_SIZE, seq_length)
+    dis_test_data_loader = Dis_dataloader(BATCH_SIZE, seq_length) # For testing
+
     with tf.device('/device:GPU:2'):
-        #Get user input
-        parser = create_parser()
-        files, vocab_size, seq_length, gen_n, disc_n, adv_n, MODEL_STRING = assign_parser_args(parser.parse_args())
-    
-
-        # Initialize the random seed
-        #random.seed(SEED)
-        #np.random.seed(SEED)
-        #tf.set_random_seed(SEED)
-        assert START_TOKEN == 0
-
-        tf.logging.set_verbosity(tf.logging.ERROR)
-
-        # Initialize the data loaders
-        gen_data_loader = Gen_Data_loader(BATCH_SIZE, seq_length)
-        likelihood_data_loader = Gen_Data_loader(BATCH_SIZE, seq_length) # For testing
-        dis_data_loader = Dis_dataloader(BATCH_SIZE, seq_length)
-        dis_test_data_loader = Dis_dataloader(BATCH_SIZE, seq_length) # For testing
-
         # Initialize the Generator
         generator = Generator(vocab_size, BATCH_SIZE, EMB_DIM, HIDDEN_DIM, seq_length, START_TOKEN)
 
@@ -289,74 +289,75 @@ def main():
         discriminator = Discriminator(sequence_length=seq_length, num_classes=2, vocab_size=vocab_size, embedding_size=dis_embedding_dim, 
                                     filter_sizes=dis_filter_sizes, num_filters=dis_num_filters, l2_reg_lambda=dis_l2_reg_lambda)
 
-        # Set session configurations. 
-        config = tf.ConfigProto()
-        config.gpu_options.allow_growth = True
-        saver = tf.train.Saver()
-        sess = tf.Session(config=config)
-        sess.run(tf.global_variables_initializer())
+    # Set session configurations. 
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
+    saver = tf.train.Saver()
+    sess = tf.Session(config=config)
+    sess.run(tf.global_variables_initializer())
 
-        # If restoring from a previous run ....
-        if len(os.listdir("./"+MODEL_STRING)) > 0:
-            saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
+    # If restoring from a previous run ....
+    if len(os.listdir("./"+MODEL_STRING)) > 0:
+        saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
 
 
-        # Create batches from the positive file.
-        gen_data_loader.create_batches(files["positive_file"])
+    # Create batches from the positive file.
+    gen_data_loader.create_batches(files["positive_file"])
 
-        # Open log file for writing
-        log = open(files['log_file'], 'w')
+    # Open log file for writing
+    log = open(files['log_file'], 'w')
 
+
+
+    # Pre_train the generator with MLE. 
+    pre_train_generator(sess, saver, MODEL_STRING, generator, gen_data_loader, likelihood_data_loader, files, log, gen_n)
+    print('Start pre-training discriminator...')
+
+    # Do the discriminator pre-training steps
+    train_discriminator(sess, generator, discriminator, dis_data_loader, dis_test_data_loader, files, log, disc_n)
+    
+    # Do the adversarial training steps
+    rollout = ROLLOUT(generator, 0.8)
+    
+    train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, 
+                    rollout, dis_data_loader, dis_test_data_loader, likelihood_data_loader, 
+                    files, log, adv_n)
+
+
+
+    #Use the best model to generate final sample
+    saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
+    generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
+
+    # Calculate the BLEUscore
+    int_to_word = json.load(open(files["int2word"], 'r'))
+    generated = datautil.int_file_to_text_ls(open(files["eval_file"], 'r'), int_to_word)
+    references = datautil.int_file_to_text_ls(open(files["test_file"], 'r'), int_to_word)
+
+    blue = nltk.translate.bleu_score.corpus_bleu([references]*len(generated), generated)
+    print("Run with args {} {} {}: BLEUscore = {}\n".format(gen_n, disc_n, adv_n, blue))
     
 
-        # Pre_train the generator with MLE. 
-        pre_train_generator(sess, saver, MODEL_STRING, generator, gen_data_loader, likelihood_data_loader, files, log, gen_n)
-        print('Start pre-training discriminator...')
-
-        # Do the discriminator pre-training steps
-        train_discriminator(sess, generator, discriminator, dis_data_loader, dis_test_data_loader, files, log, disc_n)
+    if files == synth_files:
+        generated = datautil.int_file_to_text_ls(open(synth_files["eval_file"], 'r'), int_to_word)
         
-        # Do the adversarial training steps
-        rollout = ROLLOUT(generator, 0.8)
-        train_adversarial(sess, saver, MODEL_STRING, generator, discriminator, 
-                        rollout, dis_data_loader, dis_test_data_loader, likelihood_data_loader, 
-                        files, log, adv_n)
-
-
-
-        #Use the best model to generate final sample
-        saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
-        generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
-
-        # Calculate the BLEUscore
-        int_to_word = json.load(open(files["int2word"], 'r'))
-        generated = datautil.int_file_to_text_ls(open(files["eval_file"], 'r'), int_to_word)
-        references = datautil.int_file_to_text_ls(open(files["test_file"], 'r'), int_to_word)
-
-        blue = nltk.translate.bleu_score.corpus_bleu([references]*len(generated), generated)
-        print("Run with args {} {} {}: BLEUscore = {}\n".format(gen_n, disc_n, adv_n, blue))
+        total_correct = 0
+        for sentence in generated:
+            if datautil.is_phrase_valid_passive(sentence) or datautil.is_phrase_valid_active(sentence):
+                total_correct +=1
+        prop = total_correct/len(generated)
         
+        if not os.path.exists("./synth/results.txt"):
+            os.mknod("./synth/results.txt")
 
-        if files == synth_files:
-            generated = datautil.int_file_to_text_ls(open(synth_files["eval_file"], 'r'), int_to_word)
-            
-            total_correct = 0
-            for sentence in generated:
-                if datautil.is_phrase_valid_passive(sentence) or datautil.is_phrase_valid_active(sentence):
-                    total_correct +=1
-            prop = total_correct/len(generated)
-            
-            if not os.path.exists("./synth/results.txt"):
-                os.mknod("./synth/results.txt")
+        with open("./synth/results.txt", 'a') as f:
+            outblue = "synth run {} {} {}: BLEUscore = {}\n".format(gen_n, disc_n, adv_n, blue)
+            f.write(outblue)
+            out = "synth run {} {} {}: Proportion Valid = {}\n".format(gen_n, disc_n, adv_n, prop)
+            f.write(out)
+            f.close()
 
-            with open("./synth/results.txt", 'a') as f:
-                outblue = "synth run {} {} {}: BLEUscore = {}\n".format(gen_n, disc_n, adv_n, blue)
-                f.write(outblue)
-                out = "synth run {} {} {}: Proportion Valid = {}\n".format(gen_n, disc_n, adv_n, prop)
-                f.write(out)
-                f.close()
-
-        log.close()
+    log.close()
 
 
 if __name__ == '__main__':
