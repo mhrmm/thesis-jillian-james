@@ -163,7 +163,26 @@ def write_dict_to_file(filename, d):
     with open(filename, 'w') as f:
         json.dump(d, f)
 
+# For synth data only
 
+def is_phrase_valid_passive(phrase):
+    phrase = phrase.split()
+    if len(phrase) != 5: return False
+    if "food" not in phrase[0]: return False
+    if phrase[1] != "is": return False
+    if phrase[2] not in PASSIVE_EATING_VERBS: return False
+    if phrase[3] != "by": return False
+    if "eater" not in phrase[4]: return False
+    return True
+
+
+def is_phrase_valid_active(phrase):
+    phrase = phrase.split()
+    if len(phrase) != 3: return False
+    if "eater" not in phrase[0]: return False
+    if phrase[1] not in ACTIVE_EATING_VERBS: return False
+    if "food" not in phrase[2]: return False
+    return True
 
 def main():
     # Take in application from user and use it to create training and validation data

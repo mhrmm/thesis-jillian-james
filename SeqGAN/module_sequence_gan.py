@@ -3,7 +3,6 @@ import tensorflow as tf
 import random
 import time
 import os
-import synthetic
 import datautil
 import nltk
 from dataloader import Gen_Data_loader, Dis_dataloader
@@ -342,7 +341,7 @@ def main():
         
         total_correct = 0
         for sentence in generated:
-            if synthetic.is_phrase_valid_passive(sentence) or synthetic.is_phrase_valid_active(sentence):
+            if datautil.is_phrase_valid_passive(sentence) or datautil.is_phrase_valid_active(sentence):
                 total_correct +=1
         prop = total_correct/len(generated)
         
