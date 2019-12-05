@@ -3,6 +3,7 @@ import tensorflow as tf
 import random
 import time
 import os
+import synthetic
 import datautil
 import nltk
 from dataloader import Gen_Data_loader, Dis_dataloader
@@ -45,6 +46,7 @@ synth_files = {}
 synth_files["log_file"] =  "synth/text_log.txt"
 synth_files["positive_file"] =  'synth/text_to_int.train.txt'
 synth_files["negative_file"] = 'synth/generator_sample.txt'
+synth_files["test_file"] = "synth/text_to_int.test.txt"
 synth_files["valid_file"] = "synth/text_to_int.valid.txt"
 synth_files["eval_file"] =  'synth/eval_file.txt'
 synth_files["int2word"] =  "synth/int_to_word.json"
@@ -54,6 +56,7 @@ obama_files["log_file"] =  "obama/obama_log.txt"
 obama_files["positive_file"] =  'obama/obama_to_int.train.txt'
 obama_files["negative_file"] = 'obama/generator_sample.txt'
 obama_files["valid_file"] = "obama/obama_to_int.valid.txt"
+obama_files["test_file"] = "obama/obama_to_int.test.txt"
 obama_files["eval_file"] =  'obama/eval_file.txt'
 obama_files["int2word"] =  "obama/int_to_word.json"
 
@@ -62,6 +65,7 @@ haiku_files["log_file"] =  "haiku/haiku_log.txt"
 haiku_files["positive_file"] = 'haiku/haiku_to_int.train.txt'
 haiku_files["negative_file"] = 'haiku/generator_sample.txt'
 haiku_files["valid_file"] = "haiku/haiku_to_int.valid.txt"
+obama_files["test_file"] = "haiku/haiku_to_int.test.txt"
 haiku_files["eval_file"] =  'haiku/eval_file.txt'
 haiku_files["int2word"] =  "haiku/int_to_word.json"
 
@@ -324,19 +328,31 @@ def main():
     saver.restore(sess, tf.train.latest_checkpoint(MODEL_STRING))
     generate_samples(sess, generator, BATCH_SIZE, generated_num, files["eval_file"])
 
-    # If we are doing synthetic test calculate the BLEUscore
+    # Calculate the BLEUscore
+    int_to_word = json.load(open(files["int2word"], 'r'))
+    generated = datautil.int_file_to_text_ls(open(files["eval_file"], 'r'), int_to_word)
+    references = datautil.int_file_to_text_ls(open(files["test_file"], 'r'), int_to_word)
+
+    blue = nltk.translate.bleu_score.corpus_bleu([references]*len(generated), generated)
+    print("Run with args {} {} {}: BLEUscore = {}\n".format(gen_n, disc_n, adv_n, blue))
+    
+
     if files == synth_files:
-        int_to_word = json.load(open(synth_files["int2word"], 'r'))
         generated = datautil.int_file_to_text_ls(open(synth_files["eval_file"], 'r'), int_to_word)
-        references = datautil.int_file_to_text_ls(open("synth/text_to_int.test.txt", 'r'), int_to_word)
-
-        blue = nltk.translate.bleu_score.corpus_bleu([references]*len(generated), generated)
-
+        
+        total_correct = 0
+        for sentence in generated:
+            if synthetic.is_phrase_valid_passive(sentence) or synthetic.is_phrase_valid_active(sentence):
+                total_correct +=1
+        prop = total_correct/len(generated)
+        
         if not os.path.exists("./synth/results.txt"):
             os.mknod("./synth/results.txt")
-        
+
         with open("./synth/results.txt", 'a') as f:
-            out = "synth run {} {} {}: BLEUscore = {}\n".format(gen_n, disc_n, adv_n, blue)
+            outblue = "synth run {} {} {}: BLEUscore = {}\n".format(gen_n, disc_n, adv_n, blue)
+            f.write(outblue)
+            out = "synth run {} {} {}: Proportion Valid = {}\n".format(gen_n, disc_n, adv_n, prop)
             f.write(out)
             f.close()
 
