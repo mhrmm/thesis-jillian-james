@@ -1,5 +1,47 @@
 import tensorflow as tf
 from tensorflow.python.ops import tensor_array_ops, control_flow_ops
+import numpy as np
+from trainutil import generate_samples, target_loss
+
+
+
+def pre_train_generator(sess, saver, MODEL_STRING, generator, gen_data_loader, 
+                        likelihood_data_loader, task, log, num_epochs,
+                        BATCH_SIZE, generated_num):
+
+    def pre_train_epoch(sess, trainable_model, data_loader):
+        # Pre-train the generator using MLE for one epoch
+        supervised_g_losses = []
+        data_loader.reset_pointer()
+    
+        for it in range(data_loader.num_batch):
+            batch = data_loader.next_batch()
+            _, g_loss = trainable_model.pretrain_step(sess, batch)
+            supervised_g_losses.append(g_loss)
+    
+        return np.mean(supervised_g_losses)
+
+    print('Start pre-training...')
+    log.write('pre-training...\n')
+    small_loss = float('inf')
+    for epoch in range(num_epochs):
+        loss = pre_train_epoch(sess, generator, gen_data_loader)
+        samples = generate_samples(sess, generator, BATCH_SIZE, 
+                                   generated_num, task.eval_file)
+        print("Examples from generator:")
+        for sample in task.vocab.decode(samples)[:5]:
+            print(sample)
+        likelihood_data_loader.create_batches(task.valid_file)
+        test_loss = target_loss(sess, generator, likelihood_data_loader)
+        if test_loss < small_loss:
+            small_loss = test_loss
+            saver.save(sess, MODEL_STRING+"/model")
+            print("Saving checkpoint ...")
+        print('pre-train epoch ', epoch, 'test_loss ', test_loss)
+        buffer = 'epoch:\t'+ str(epoch) + '\tloss:\t' + str(loss) + '\n'
+        log.write(buffer)
+    return small_loss
+
 
 class Generator(object):
     def __init__(self, num_emb, batch_size, emb_dim, hidden_dim,
