@@ -1,5 +1,5 @@
 import random
-
+import sys
 
 PASSIVE_EATING_VERBS = ["eaten", "consumed", "devoured"]
 ACTIVE_EATING_VERBS = ["eats", "consumes", "devours"]
@@ -23,21 +23,20 @@ def generate_random_sent(food_vocab_size, eater_vocab_size):
     else:
         return generate_random_passive_sent(food_vocab_size, eater_vocab_size)
 
-def generate_random_sents(train_file, test_file, num_sents,
+def generate_random_sents(output_file, num_sents,
                           food_vocab_size, eater_vocab_size):
     sents = set()
     for i in range(num_sents):
         sents.add(generate_random_sent(food_vocab_size, eater_vocab_size))
     sents = list(sents)
-    split_point = len(sents)//2 
-    with open(train_file, 'w') as writer:
-        for sent in sents[:split_point]:
-            writer.write(sent)
-            writer.write('\n\n')
-    with open(test_file, 'w') as writer:
-        for sent in sents[split_point:]:
+    with open(output_file, 'w') as writer:
+        for sent in sents:
             writer.write(sent)
             writer.write('\n\n')
     
+    
+if __name__ == "__main__":
+    generate_random_sents('./input.txt', sys.argv[1], 
+                          sys.argv[2], sys.argv[3])
     
     
