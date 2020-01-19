@@ -12,7 +12,7 @@
 
 To run this application, you must first run datautil.py and then module_sequence_gan.py.
 
-Note that module_sequance_gan.py has the following required arguments
+Note that module_sequence_gan.py has the following required arguments
     app         Either 'obama' or 'haiku'
     gen_n       Number of generator pre-training steps 
     disc_n      Number of discriminator pre-training steps
@@ -25,8 +25,11 @@ It also also has several optional arguments:
 
 So to run the Obama application with default sequence length and vocab size, run:
     python3 datautil.py obama
-    python3 module_sequance_gan.py obama gen_n disc_n adv_n
+    python3 module_sequence_gan.py obama gen_n disc_n adv_n
 
 To run the Obama application with custom sequence length and vocab size, run:
     python3 datautil.py obama
-    python3 module_sequance_gan.py obama gen_n disc_n adv_n -l SEQ_LEN -v VOCAB_SIZE       
+    python3 module_sequence_gan.py obama gen_n disc_n adv_n -l SEQ_LEN -v VOCAB_SIZE       
+
+After running the training, you can look at some of generated examples via:
+    python3 generated_example.py obama
