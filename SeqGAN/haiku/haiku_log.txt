@@ -1,8 +1,0 @@
-pre-training...
-adversarial training...
-epoch:	20	loss:	2.1635084
-epoch:	20	loss:	2.1635084
-epoch:	20	loss:	2.1635084
-epoch:	20	loss:	2.1635084
-epoch:	20	loss:	2.1635084
-epoch:	20	loss:	2.1635084

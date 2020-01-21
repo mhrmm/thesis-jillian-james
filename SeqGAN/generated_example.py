@@ -1,11 +1,28 @@
-import datautil
 import random
 import nltk
 import json
 import argparse
-import sys
-import os
 
+def remove_filler(generated):
+    for j in range(len(generated)):
+        generated[j] = [value for value in generated[j] if value != " _FILL_ "]
+    return generated
+
+
+def int_file_to_text_ls(f, int_to_word):
+    '''
+    Reads file in dataloader form and converts to text
+    using dictionary mappings
+    '''
+    text_ls = []
+ 
+    for line in f:
+        line = line.strip()
+        line = line.split()
+        parse_line = [int_to_word[x] for x in line]
+        " ".join(parse_line)
+        text_ls.append(parse_line)
+    return text_ls
 
 
 def main():
@@ -17,21 +34,20 @@ def main():
 
     if args.app == "haiku":
         int_to_word = json.load(open("haiku/int_to_word.json", 'r'))
-        generated = datautil.int_file_to_text_ls(open("haiku/eval_file.txt", 'r'), int_to_word)
-        references = datautil.int_file_to_text_ls(open("haiku/haiku_to_int.test.txt", 'r'), int_to_word)
-    elif args.app = "obama":
+        generated = int_file_to_text_ls(open("haiku/eval_file.txt", 'r'), int_to_word)
+        references = int_file_to_text_ls(open("haiku/haiku_to_int.test.txt", 'r'), int_to_word)
+    elif args.app == "obama":
         int_to_word = json.load(open("obama/int_to_word.json", 'r'))
-        generated = datautil.int_file_to_text_ls(open("obama/eval_file.txt", 'r'), int_to_word)
-        references = datautil.int_file_to_text_ls(open("obama/obama_to_int.test.txt", 'r'), int_to_word)
+        generated = int_file_to_text_ls(open("obama/eval_file.txt", 'r'), int_to_word)
+        references = int_file_to_text_ls(open("obama/obama_to_int.test.txt", 'r'), int_to_word)
     else:
         int_to_word = json.load(open("synth/int_to_word.json", 'r'))
-        generated = datautil.int_file_to_text_ls(open("synth/eval_file.txt", 'r'), int_to_word)
-        references = datautil.int_file_to_text_ls(open("obama/text_to_int.test.txt", 'r'), int_to_word)
-
+        generated = int_file_to_text_ls(open("synth/eval_file.txt", 'r'), int_to_word)
+        references = int_file_to_text_ls(open("obama/text_to_int.test.txt", 'r'), int_to_word)
 
     print("Removing _FILL_ tokens ...")
-    generated = datautil.remove_filler(generated)
-    references = datautil.remove_filler(references)
+    generated = remove_filler(generated)
+    references = remove_filler(references)
 
 
     text_ls_sample = random.choices(generated, k = 10)

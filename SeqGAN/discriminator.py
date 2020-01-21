@@ -1,5 +1,56 @@
 import tensorflow as tf
-import numpy as np
+from trainutil import generate_samples
+
+
+def accuracy(y_batch, predictions):
+    y_batch = y_batch.tolist()
+    gold = [ls.index(1) for ls in y_batch]
+    correct = [x == (0,0) or x == (1,1) for x in zip(predictions, gold)]
+    return sum(correct), len(correct)
+
+def train_discriminator(sess, generator, discriminator, dis_data_loader, 
+                        task, log, n, BATCH_SIZE, generated_num,
+                        dis_dropout_keep_prob):
+    for _ in range(n):
+        generate_samples(sess, generator, BATCH_SIZE, generated_num, 
+                         task.negative_file)
+        dis_data_loader.load_train_data(task.train_file, task.negative_file)
+        for _ in range(3):
+            dis_data_loader.reset_pointer()
+            correct = 0
+            total = 0
+            for it in range(dis_data_loader.num_batch):
+                x_batch, y_batch = dis_data_loader.next_batch()
+                
+                feed = {
+                    discriminator.input_x: x_batch,
+                    discriminator.input_y: y_batch,
+                    discriminator.dropout_keep_prob: dis_dropout_keep_prob
+                }
+                sess.run(discriminator.train_op, feed)
+                predictions = sess.run(discriminator.predictions, feed)
+                subcorrect, subtotal = accuracy(y_batch, predictions)
+                correct += subcorrect
+                total += subtotal
+            print("Training Accuracy: {}".format(correct / total))
+        generate_samples(sess, generator, BATCH_SIZE, task.num_valid, 
+                         task.negative_file)
+        dis_data_loader.load_train_data(task.valid_file, task.negative_file)
+        correct = 0
+        total = 0
+        for it in range(dis_data_loader.num_batch):
+            x_batch, y_batch = dis_data_loader.next_batch()         
+            feed = {
+                discriminator.input_x: x_batch,
+                discriminator.input_y: y_batch,
+                discriminator.dropout_keep_prob: 1.0
+            }
+            predictions = sess.run(discriminator.predictions, feed)
+            subcorrect, subtotal = accuracy(y_batch, predictions)
+            correct += subcorrect
+            total += subtotal
+        print("Validation Accuracy: {}".format(correct / total))
+
 
 # An alternative to tf.nn.rnn_cell._linear function, which has been removed in Tensorfow 1.0.1
 # The highway layer is borrowed from https://github.com/mkroutikov/tf-lstm-char-cnn
@@ -123,6 +174,7 @@ class Discriminator(object):
                 self.scores = tf.nn.xw_plus_b(self.h_drop, W, b, name="scores")
                 self.ypred_for_auc = tf.nn.softmax(self.scores)
                 self.predictions = tf.argmax(self.scores, 1, name="predictions")
+                
 
             # CalculateMean cross-entropy loss
             with tf.name_scope("loss"):

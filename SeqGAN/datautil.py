@@ -1,168 +1,65 @@
-import json
-import random
 from sklearn.model_selection import train_test_split
-import argparse
 import sys
 import re
+from os.path import join
 
 
-
-# Helper functions for converting between text to DataLoader form
-
-def haiku_to_ls(f):
-    '''
-    Makes lists of haikus from haiku file
-    '''
-    full = []
-    haiku = []
-    n = 0
-    for line in f:
-        if line == "\n":
-            num_stopwords = 70 - len(haiku)
-            if num_stopwords > 0:
-                haiku += [" _FILL_ "]*num_stopwords
-                full.append(haiku)
-            else:
-                haiku = haiku[:70]
-                full.append(haiku)
-            n+=1
-            haiku = []
-        else:
-            line = line.strip()
-            line = list(line.lower())
-            line.append(" _BREAK_ ")
-            haiku += line
-    return full
+class HaikuTokenizer:
     
-
-
-def obama_to_ls(f):
-    '''
-    Makes list of Obama speach paragraphs from Obama file.
-    '''
-    full = []
-    paragraph = []
-    n = 0
-    for line in f:
-        if line != "\n":
-            line = line.strip()
-            line = re.findall(r"[\w']+|[.,!?();-]", line.lower())
-            num_stopwords = 40 - len(line)
-            if line != []:
-                if len(line) < 40:
-                    paragraph = line + [" _FILL_ "]*num_stopwords
-                    full.append(paragraph)
-                else:
-                    paragraph = line[:40]
-                    full.append(paragraph)
-                n+= 1
-    return full
-
-def synth_to_ls(f):
-    '''
-    Makes list of Obama speach paragraphs from Obama file.
-    '''
-    full = []
-    paragraph = []
-    n = 0
-    for line in f:
-        if line != "\n":
-            line = line.strip()
-            line = re.findall(r"[\w']+|[.,!?();-]", line.lower())
-            num_stopwords = 40 - len(line)
-            if line != []:
-                if len(line) < 40:
-                    paragraph = line + ["_FILL_"]*num_stopwords
-                    full.append(paragraph)
-                else:
-                    paragraph = line[:40]
-                    full.append(paragraph)
-                n+= 1
-    return full
-
-
-
-def create_dicts(lines_ls):
-    '''
-    Creates dictionaries for converting between
-    token and integer form for dataloader.
-    '''
-    all_tokens= []
-    for line in lines_ls:
-        for token in line:
-            all_tokens.append(token)
-
-    all_tokens = list(set(all_tokens))
-    all_tokens = sorted(all_tokens)
-    int_to_word, word_to_int = {}, {}
-
-    for i in range(len(all_tokens)):
-        word_to_int[all_tokens[i]] = i
-        int_to_word[i] = all_tokens[i]
-
-    return word_to_int, int_to_word, len(all_tokens)
-
-def remove_filler(generated):
-    new = []
-    for j in range(len(generated)):
-        new.append([value for value in generated[j] if value != "_FILL_"])
-    return new
-
-
-
-def text_ls_to_int_ls(text_ls, word_to_int):
-    '''
-    Converts a token list to integer for using
-    dictionary mappings
-    '''
-
-    new_full = []
-    for text in text_ls:
-        new_text = []
-        for word in text:
-            new_text.append(word_to_int[word])
-        new_full.append(new_text)
-    return new_full
-
-def int_to_text_ls(line, int_to_word):
-    '''
-    Reads file in dataloader form and converts to text
-    using dictionary mappings
-    '''
-    parse_line = [int_to_word[x] for x in line]
-    return parse_line
-
-
-
-def int_file_to_text_ls(f, int_to_word):
-    '''
-    Reads file in dataloader form and converts to text
-    using dictionary mappings
-    '''
-    text_ls = []
- 
-    for line in f:
+    def __init__(self, desired_seg_len):
+        self.desired_seg_len = desired_seg_len
+    
+    def __call__(self, lines):
+        result = []
+        segment = []
+        for line in lines:
+            if line == "\n": 
+                result.append(self.finalize_segment(segment))
+                segment = []
+            else:
+                segment += self.tokenize_line(line)
+        return result
+    
+    def finalize_segment(self, segment):
+        num_stopwords = self.desired_seg_len - len(segment)
+        if num_stopwords > 0:
+            segment += [" _FILL_ "] * num_stopwords
+        else:
+            segment = segment[:self.desired_seg_len]
+        return segment
+    
+    def tokenize_line(self, line):
         line = line.strip()
-        line = line.split()
-        parse_line = [int_to_word[x] for x in line]
-        " ".join(parse_line)
-        text_ls.append(parse_line)
-    return text_ls
+        line = list(line.lower())
+        line.append(" _BREAK_ ")
+        return line
 
+class ObamaTokenizer:
 
-def write_lists_to_file(filename, full_lists):
-    with open(filename, "w") as f:
-        for ls in full_lists:
-            line = " ".join([str(x) for x in ls])+ "\n"
-            f.write(line)
+    def __init__(self, desired_seg_len):
+        self.desired_seg_len = desired_seg_len
+    
+    def __call__(self, lines):
+        full = []
+        paragraph = []
+        n = 0
+        for line in lines:
+            if line != "\n":
+                line = line.strip()
+                line = re.findall(r"[\w']+|[.,!?();-]", line.lower())
+                num_stopwords = self.desired_seg_len - len(line)
+                if line != []:
+                    if len(line) < self.desired_seg_len:
+                        paragraph = line + [" _FILL_ "]*num_stopwords
+                        full.append(paragraph)
+                    else:
+                        paragraph = line[:self.desired_seg_len]
+                        full.append(paragraph)
+                    n+= 1
+        return full
 
-
-
-def write_dict_to_file(filename, d):
-    with open(filename, 'w') as f:
-        json.dump(d, f)
-
-# For synth data only
+PASSIVE_EATING_VERBS = ["eaten", "consumed", "devoured"]
+ACTIVE_EATING_VERBS = ["eats", "consumes", "devours"]
 
 def is_phrase_valid_passive(phrase):
     if len(phrase) != 5: return False
@@ -182,63 +79,114 @@ def is_phrase_valid_active(phrase):
     return True
 
 
+class Vocab:
+    
+    def __init__(self, all_tokens):
+        self.all_tokens = all_tokens
+        self.int_to_word, self.word_to_int = {}, {}
+    
+        for i in range(len(all_tokens)):
+            self.word_to_int[all_tokens[i]] = i
+            self.int_to_word[i] = all_tokens[i]
+    
+    def __len__(self):
+        return len(self.all_tokens)
 
-def main():
-    # Take in application from user and use it to create training and validation data
-    parser = argparse.ArgumentParser(description='Program for converting a datafile to dataloader form.')
-    parser.add_argument('app', metavar='application', type=str, default = 'obama',
-                        help='Enter either \'obama\' or \'haiku\'')
-    args = parser.parse_args()
-    len_train, len_valid, len_test = 0.4, 0.4, 0.2
-    if args.app == 'obama':
-        whole = obama_to_ls(open('obama/input.txt', 'r'))
-        train_ls, remainder = train_test_split(whole, test_size = 0.4, shuffle = False)
-        valid_ls, test_ls = train_test_split(remainder, test_size = 0.5, shuffle = False)
-    elif args.app == 'haiku': 
-        whole = haiku_to_ls(open("haiku/input.txt", 'r'))
-        train_ls, remainder = train_test_split(whole, test_size = 0.4, shuffle = False)
-        valid_ls, test_ls = train_test_split(remainder, test_size = 0.5, shuffle = False)
-    elif args.app == 'synth':
-        whole = synth_to_ls(open('synth/input.txt', 'r'))
-        train_ls, remainder = train_test_split(whole, test_size = 0.4, shuffle = False)
-        valid_ls, test_ls = train_test_split(remainder, test_size = 0.5, shuffle = False)
+    def encode(self, text_ls):
+        new_full = []
+        for text in text_ls:
+            new_text = []
+            for word in text:
+                new_text.append(self.word_to_int[word])
+            new_full.append(new_text)
+        return new_full
+    
+    def decode(self, lines):
+        text_ls = []    
+        for line in lines:
+            parse_line = [self.int_to_word[x] for x in line 
+                          if self.int_to_word[x] != " _FILL_ "]
+            parse_line = " ".join(parse_line)
+            text_ls.append(parse_line)
+        return text_ls
+
+    @staticmethod
+    def construct(lines_ls):        
+        all_tokens= []
+        for line in lines_ls:
+            for token in line:
+                all_tokens.append(token)
+        all_tokens = list(set(all_tokens))
+        all_tokens = sorted(all_tokens)
+        return Vocab(all_tokens)
+
+
+
+class Task:
+    def __init__(self, vocab, path, max_seq_length, num_train, 
+                 num_valid, num_test):
+        self.vocab = vocab
+        self.path = path
+        self.train_file = join(path, "encoded.train.txt")
+        self.valid_file = join(path, "encoded.valid.txt")
+        self.test_file = join(path, "encoded.test.txt")
+        self.log_file = join(path, "log.txt")
+        self.negative_file = join(path, "negative.txt")
+        self.eval_file = join(path, "eval_file.txt")
+        self.max_seq_length = max_seq_length
+        self.vocab_size = len(vocab)
+        self.generated_num = num_train
+        self.num_valid = num_valid
+        self.num_test = num_test
+
+
+def load_task(taskname):
+    def write_lists_to_file(filename, full_lists):
+        with open(filename, "w") as f:
+            for ls in full_lists:
+                line = " ".join([str(x) for x in ls])+ "\n"
+                f.write(line)
+
+    print("Loading task: " + str(taskname))
+
+    if taskname == 'obama':
+        max_seq_length = 40
+        tokenizer = ObamaTokenizer(max_seq_length)
+    elif taskname == 'synth':
+        max_seq_length = 20
+        tokenizer = ObamaTokenizer(max_seq_length)        
+    elif taskname == 'haiku': 
+        max_seq_length = 70
+        tokenizer = HaikuTokenizer(max_seq_length)
     else:
         print("Application must be haiku or obama or synth")
         sys.exit(0)
+     
+    path = join("../data", taskname)
+    input_file = join(path, "input.txt")         
+    whole = tokenizer(open(input_file, 'r'))
+    train_ls, remainder = train_test_split(whole, test_size = 0.4, 
+                                           shuffle = False)
+    valid_ls, test_ls = train_test_split(remainder, test_size = 0.5, 
+                                         shuffle = False)
 
     # Create dictionaries to map integers to tokens and vice versa
-    word_to_int, int_to_word, vocab_length = create_dicts(train_ls + valid_ls + test_ls)
-    train_as_int_ls = text_ls_to_int_ls(train_ls, word_to_int)
-    valid_as_int_ls = text_ls_to_int_ls(valid_ls, word_to_int)
-    test_as_int_ls = text_ls_to_int_ls(test_ls, word_to_int)
+    vocab = Vocab.construct(train_ls + valid_ls + test_ls)
+    train_as_int_ls = vocab.encode(train_ls)
+    valid_as_int_ls = vocab.encode(valid_ls)
+    test_as_int_ls = vocab.encode(test_ls)
 
-    print("Vocab length: ", vocab_length)
-    print("Original set length", len(whole))
-    print("Training set length: ", len(train_as_int_ls))
-    print("Valid set length: ", len(valid_as_int_ls))
-    print("Test set length: ", len(test_as_int_ls))
-
+    task = Task(vocab, path, max_seq_length, len(train_ls), 
+                len(valid_ls), len(test_ls))
 
     # Write to correct application training and validation files
     # Write conversion dictionaries
-    if args.app == 'obama':
-        write_dict_to_file("obama/word_to_int.json", word_to_int)
-        write_dict_to_file("obama/int_to_word.json", int_to_word)
-        write_lists_to_file("obama/obama_to_int.train.txt", train_as_int_ls)
-        write_lists_to_file("obama/obama_to_int.valid.txt", valid_as_int_ls)
-        write_lists_to_file("obama/obama_to_int.test.txt", test_as_int_ls)
-    elif args.app == 'haiku':
-        write_dict_to_file("haiku/word_to_int.json", word_to_int)
-        write_dict_to_file("haiku/int_to_word.json", int_to_word)
-        write_lists_to_file("haiku/haiku_to_int.train.txt", train_as_int_ls)
-        write_lists_to_file("haiku/haiku_to_int.valid.txt", valid_as_int_ls)
-        write_lists_to_file("haiku/haiku_to_int.test.txt", test_as_int_ls)
-    elif args.app == 'synth':
-        write_dict_to_file("synth/word_to_int.json", word_to_int)
-        write_dict_to_file("synth/int_to_word.json", int_to_word)
-        write_lists_to_file("synth/text_to_int.train.txt", train_as_int_ls)
-        write_lists_to_file("synth/text_to_int.valid.txt", valid_as_int_ls)
-        write_lists_to_file("synth/text_to_int.test.txt", test_as_int_ls)
 
-if __name__ == '__main__':
-    main()
+    write_lists_to_file(task.train_file, train_as_int_ls)
+    write_lists_to_file(task.valid_file, valid_as_int_ls)
+    write_lists_to_file(task.test_file, test_as_int_ls)
+    
+    print("Task successfully loaded.")
+
+    return task
+
